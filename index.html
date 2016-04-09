@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<script src="LLJS/src/memcheck.js"></script>
+<script src="LLJS/src/memory.js"></script>
+<script>
+function require(name) {
+  return window[name];
+}
+</script>
+<script src="filter.js"></script>
+<body>
+<script>
+function rgb2ycbco(buffer, pixels) {
+  var y, cg, co;
+  var i = 0;
+  while (i + 3 < pixels * 4) {
+    y = (buffer[i] + 2 * buffer[i+1] + buffer[i+2]|0)/4|0;
+    cg = (-buffer[i] + 2 * buffer[i+1] - buffer[i+2]|0)/4|0;
+    co = (buffer[i] - buffer[i+2]|0)/2|0;
+    buffer[i] = y;
+    buffer[i+1] = cg + 128;
+    buffer[i+2] = co + 128;
+    i = i+4|0;
+  }
+}
+function ycbco2rgb(buffer, pixels) {
+  var r, g, b, t;
+  var i = 0;
+  while (i + 3 < pixels * 4) {
+    t = buffer[i] - (buffer[i+1] - 128|0)|0;
+    r = t + buffer[i+2] - 128|0;
+    g = buffer[i] + (buffer[i+1] - 128|0)|0;
+    b = t - buffer[i+2] + 128|0;
+    buffer[i] = r;
+    buffer[i+1] = g;
+    buffer[i+2] = b;
+    i = i+4|0;
+  }
+}
+function lapvert(buffer, pixels) {
+  var i = 0;
+  var inptr = window.memory.malloc((4 * 8 | 0) >>> 0) >> 2;
+  var outptr = window.memory.malloc((4 * 8 | 0) >>> 0) >> 2;
+  var $I4 = window.memory.I4;
+  while (i + 8 * 4 - 1 < pixels * 4) {
+    $I4[inptr+0] = (buffer[i]|0)     << 4;
+    $I4[inptr+1] = (buffer[i+4]|0)   << 4;
+    $I4[inptr+2] = (buffer[i+4*2]|0) << 4;
+    $I4[inptr+3] = (buffer[i+4*3]|0) << 4;
+    $I4[inptr+4] = (buffer[i+4*4]|0) << 4;
+    $I4[inptr+5] = (buffer[i+4*5]|0) << 4;
+    $I4[inptr+6] = (buffer[i+4*6]|0) << 4;
+    $I4[inptr+7] = (buffer[i+4*7]|0) << 4;
+    od_pre_filter8(outptr, inptr);
+    buffer[i]     = $I4[outptr+0] >> 4;
+    buffer[i+4]   = $I4[outptr+1] >> 4;
+    buffer[i+4*2] = $I4[outptr+2] >> 4;
+    buffer[i+4*3] = $I4[outptr+3] >> 4;
+    buffer[i+4*4] = $I4[outptr+4] >> 4;
+    buffer[i+4*5] = $I4[outptr+5] >> 4;
+    buffer[i+4*6] = $I4[outptr+6] >> 4;
+    buffer[i+4*7] = $I4[outptr+7] >> 4;
+    i = i+1|0;
+    $I4[inptr+0] = (buffer[i]|0)     << 4;
+    $I4[inptr+1] = (buffer[i+4]|0)   << 4;
+    $I4[inptr+2] = (buffer[i+4*2]|0) << 4;
+    $I4[inptr+3] = (buffer[i+4*3]|0) << 4;
+    $I4[inptr+4] = (buffer[i+4*4]|0) << 4;
+    $I4[inptr+5] = (buffer[i+4*5]|0) << 4;
+    $I4[inptr+6] = (buffer[i+4*6]|0) << 4;
+    $I4[inptr+7] = (buffer[i+4*7]|0) << 4;
+    od_pre_filter8(outptr, inptr);
+    buffer[i]     = $I4[outptr+0] >> 4;
+    buffer[i+4]   = $I4[outptr+1] >> 4;
+    buffer[i+4*2] = $I4[outptr+2] >> 4;
+    buffer[i+4*3] = $I4[outptr+3] >> 4;
+    buffer[i+4*4] = $I4[outptr+4] >> 4;
+    buffer[i+4*5] = $I4[outptr+5] >> 4;
+    buffer[i+4*6] = $I4[outptr+6] >> 4;
+    buffer[i+4*7] = $I4[outptr+7] >> 4;
+    i = i+1|0;
+    $I4[inptr+0] = (buffer[i]|0)     << 4;
+    $I4[inptr+1] = (buffer[i+4]|0)   << 4;
+    $I4[inptr+2] = (buffer[i+4*2]|0) << 4;
+    $I4[inptr+3] = (buffer[i+4*3]|0) << 4;
+    $I4[inptr+4] = (buffer[i+4*4]|0) << 4;
+    $I4[inptr+5] = (buffer[i+4*5]|0) << 4;
+    $I4[inptr+6] = (buffer[i+4*6]|0) << 4;
+    $I4[inptr+7] = (buffer[i+4*7]|0) << 4;
+    od_pre_filter8(outptr, inptr);
+    buffer[i]     = $I4[outptr+0] >> 4;
+    buffer[i+4]   = $I4[outptr+1] >> 4;
+    buffer[i+4*2] = $I4[outptr+2] >> 4;
+    buffer[i+4*3] = $I4[outptr+3] >> 4;
+    buffer[i+4*4] = $I4[outptr+4] >> 4;
+    buffer[i+4*5] = $I4[outptr+5] >> 4;
+    buffer[i+4*6] = $I4[outptr+6] >> 4;
+    buffer[i+4*7] = $I4[outptr+7] >> 4;
+    i = i+8*4-2|0;
+  }
+}
+function foo() {
+  var canvas = document.getElementById('canvas');
+  var srcimage = document.getElementById('srcimage');
+  var w = srcimage.width;
+  var h = srcimage.height;
+  canvas.width = w;
+  canvas.height = h;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(srcimage, 0, 0, w, h, 0, 0, w, h);
+  var image = ctx.getImageData(0, 0, w, h);
+  var imageptr = window.memory.malloc((w * h * 4 | 0) >>> 0);
+  var imagebuffer = new Uint8Array(window.memory.U1, imageptr, w * h * 4);
+  imagebuffer.set(image.data);
+  rgb2ycbco(imagebuffer, w*h);
+  lapvert(imagebuffer, w*h);
+  ycbco2rgb(imagebuffer, w*h);
+  image.data.set(imagebuffer.subarray(0, w*h*4));
+  ctx.putImageData(image, 0, 0);
+}
+</script>
+<img id="srcimage" style="display:none;" src="Clovisfest.png" onload="foo();"/>
+<canvas id='canvas' width=1 height=1></canvas>
+</body>
