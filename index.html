@@ -40,7 +40,14 @@ function ycbco2rgb(inbuf, outbuf, pixels) {
 function lapvert(bufptr, pixels) {
   var i = 0;
   while (i < pixels * 3) {
-    od_pre_filter8(bufptr + i * 8 , bufptr + i * 8);
+    od_pre_filter8((bufptr + i * 8)<<2, (bufptr + i * 8)<<2);
+    i = i+1;
+  }
+}
+function unlapvert(bufptr, pixels) {
+  var i = 0;
+  while (i < pixels * 3) {
+    od_post_filter8((bufptr + i * 8)<<2, (bufptr + i * 8)<<2);
     i = i+1;
   }
 }
@@ -57,7 +64,13 @@ function foo() {
   var imageptr = window.memory.malloc(w * h * 3 * 4) >> 2;
   var imagebuffer = window.memory.I4.subarray(imageptr, w * h * 3);
   rgb2ycbco(image.data, imagebuffer, w*h);
+  var ts = new Date();
   lapvert(imageptr, w*h);
+  console.log(new Date() - ts);ts = new Date();
+  /*
+  unlapvert(imageptr, w*h);
+  console.log(new Date() - ts);ts = new Date();
+  */
   ycbco2rgb(imagebuffer, image.data, w*h);
   ctx.putImageData(image, 0, 0);
 }

@@ -1,210 +1,204 @@
-const $M = require('memory');
-$M.set_memcheck(false);
-const OD_COEFF_BITS = 32;
-/*Daala video codec
-Copyright (c) 2003-2010 Daala project contributors.  All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-- Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
-/*Pre-/post-filter pairs of various sizes.
-  For a FIR, PR, LP filter bank, the pre-filter must have the structure:
-
-   0.5*{{I,J},{J,-I}}*{{U,0},{0,V}},{{I,J},{J,-I}}
-
-  To create a pre-/post-filter for an M-sample block transform, I, J, U and V
-   are blocks of size floor(M/2).
-  I is the identity, J is the reversal matrix, and U and V are arbitrary
-   invertible matrices.
-  If U and V are orthonormal, then the pre-/post-filters are orthonormal.
-  Otherwise they are merely biorthogonal.
-  For filters with larger inputs, multiple pre-/post-filter stages can be used.
-  However, one level should be sufficient to eliminate blocking artifacts, and
-   additional levels would expand the influence of ringing artifacts.
-
-  All the filters here are an even narrower example of the above structure.
-  U is taken to be the identity, as it does not help much with energy
-   compaction.
-  V can be chosen so that the filter pair is (1,2) regular, assuming a block
-   filter with 0 DC leakage, such as the DCT.
-  This may be particularly important for the way that motion-compensated
-   prediction is done.
-  A 2-regular synthesis filter can reproduce a linear ramp from just the DC
-   coefficient, which matches the linearly interpolated offsets that were
-   subtracted out of the motion-compensation phase.
-
-  In order to yield a fast implementation, the V filter is chosen to be of the
-   form:
-    x0 -s0----------...----+---- y0
-            p0 |           | u0
-    x1 -s1-----+----...--+------ y1
-              p1 |       | u1
-    x2 -s2-------+--...+-------- y2
-                p2 |   | u2
-    x3 -s3---------+...--------- y3
-                     .
-                     .
-                     .
-  Here, s(i) is a scaling factor, such that s(i) >= 1, to preserve perfect
-   reconstruction given an integer implementation.
-  p(i) and u(i) are arbitrary, so long as p(i)u(i) != -1, to keep the transform
-   invertible.
-  In order to make V (1,2) regular, we have the conditions:
-    s0+M*u0==M
-    (2*i+1)*s(i)+M*u(i)+M*(1-u(i-1))*p(i-1)==M, i in [1..K-2]
-    (M-1)*s(K-1)+M*(1-u(K-2))*p(K-2)==M
-   where K=floor(M/2).
-  These impose additonal constraints on u(i) and p(i), derived from the
-   constraints above, such as u(0) <= (M-1)/M.
-  It is desirable to have u(i), p(i) and 1/s(i) be dyadic rationals, the latter
-   to provide for a fast inverse transform.
-  However, as can be seen by the constraints, it is very easy to make u(i) and
-   p(i) be dyadic, or 1/s(i) be dyadic, but solutions with all of them dyadic
-   are very sparse, and require at least s(0) to be a power of 2.
-  Such solutions do not have a good coding gain, and so we settle for having
-   s(i) be dyadic instead of 1/s(i).
-
-  Or we use the form
-    x0 -s0---------------+---- y0
-                    p0 | | u0
-    x1 -s1-----------+-+------ y1
-                p1 | | u1
-    x2 -s2-------+-+---------- y2
-            p2 | | u2
-    x3 -s3-----+-------------- y3
-                 .
-                 .
-                 .
-   which yields slightly higher coding gains, but the conditions for
-    (1,2) regularity
-    s0+M*u0==M
-    (2*i+1)*s(i)+M*u(i)+(2*i-1)*s(i-1)*p(i-1)==M, i in [1..K-2]
-    (M-1)*s(K-1)+(M-3)*s(K-2)*p(K-2)==M
-   make dyadic rational approximations more sparse, such that the coding gains
-   of the approximations are actually lower. This is selected when the TYPE3
-   defines are set.
-
-  The maximum denominator for all coefficients was allowed to be 64.*/
-/*R=f
-  6-bit
-  Subset3_2d_Cg = 16.7948051638528391
-  This filter has some of the scale factors
-   forced to one to reduce complexity. Without
-   this constraint we get a filter with Subset3_2d_Cg
-   of 16.8035257369844686. The small cg loss is likely
-   worth the reduction in multiplies and adds.*/
-/*Optimal 1d subset3 Cg*/
-const OD_FILTER_PARAMS8_0 = 93;
-const OD_FILTER_PARAMS8_1 = 72;
-const OD_FILTER_PARAMS8_2 = 73;
-const OD_FILTER_PARAMS8_3 = 78;
-const OD_FILTER_PARAMS8_4 = -28;
-const OD_FILTER_PARAMS8_5 = -23;
-const OD_FILTER_PARAMS8_6 = -10;
-const OD_FILTER_PARAMS8_7 = 50;
-const OD_FILTER_PARAMS8_8 = 37;
-const OD_FILTER_PARAMS8_9 = 23;
-function od_pre_filter8(_y, _x) {
-  const $I4 = $M.I4, $U4 = $M.U4;
-  var _;
-  const $SP = $U4[1] -= 16;
-  var _;
-  /*+1/-1 butterflies (required for FIR, PR, LP).*/
-  $I4[($SP) + 7] = $I4[_x + 0] - $I4[_x + 7] | 0;
-  $I4[($SP) + 6] = $I4[_x + 1] - $I4[_x + 6] | 0;
-  $I4[($SP) + 5] = $I4[_x + 2] - $I4[_x + 5] | 0;
-  $I4[($SP) + 4] = $I4[_x + 3] - $I4[_x + 4] | 0;
-  $I4[($SP) + 3] = $I4[_x + 3] - ($I4[($SP) + 4] >> 1) | 0;
-  $I4[($SP) + 2] = $I4[_x + 2] - ($I4[($SP) + 5] >> 1) | 0;
-  $I4[($SP) + 1] = $I4[_x + 1] - ($I4[($SP) + 6] >> 1) | 0;
-  $I4[($SP) + 0] = $I4[_x + 0] - ($I4[($SP) + 7] >> 1) | 0;
-  /*U filter (arbitrary invertible, omitted).*/
-  /*V filter (arbitrary invertible, can be optimized for speed or accuracy).*/
-  /*Scaling factors: the biorthogonal part.*/
-  /*Note: t[i]+=t[i]>>(OD_COEFF_BITS-1)&1; is equivalent to: if(t[i]>0)t[i]++;
-    This step ensures that the scaling is trivially invertible on the
-     decoder's side, with perfect reconstruction.*/
-  $I4[($SP) + 4] = ($I4[($SP) + 4] * OD_FILTER_PARAMS8_0 | 0) >> 6;
-  $I4[($SP) + 4] = $I4[($SP) + 4] + (-$I4[($SP) + 4] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
-  $I4[($SP) + 5] = ($I4[($SP) + 5] * OD_FILTER_PARAMS8_1 | 0) >> 6;
-  $I4[($SP) + 5] = $I4[($SP) + 5] + (-$I4[($SP) + 5] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
-  $I4[($SP) + 6] = ($I4[($SP) + 6] * OD_FILTER_PARAMS8_2 | 0) >> 6;
-  $I4[($SP) + 6] = $I4[($SP) + 6] + (-$I4[($SP) + 6] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
-  $I4[($SP) + 7] = ($I4[($SP) + 7] * OD_FILTER_PARAMS8_3 | 0) >> 6;
-  $I4[($SP) + 7] = $I4[($SP) + 7] + (-$I4[($SP) + 7] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
-  /*Rotations:*/
-  $I4[($SP) + 7] = $I4[($SP) + 7] + ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_6 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 6] = $I4[($SP) + 6] + ((($I4[($SP) + 7] * OD_FILTER_PARAMS8_9 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 6] = $I4[($SP) + 6] + ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_5 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 5] = $I4[($SP) + 5] + ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_8 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 5] = $I4[($SP) + 5] + ((($I4[($SP) + 4] * OD_FILTER_PARAMS8_4 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 4] = $I4[($SP) + 4] + ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_7 | 0) + 32 | 0) >> 6) | 0;
-  /*More +1/-1 butterflies (required for FIR, PR, LP).*/
-  $I4[($SP) + 0] = $I4[($SP) + 0] + ($I4[($SP) + 7] >> 1) | 0;
-  $I4[_y + 0] = $I4[($SP) + 0];
-  $I4[($SP) + 1] = $I4[($SP) + 1] + ($I4[($SP) + 6] >> 1) | 0;
-  $I4[_y + 1] = $I4[($SP) + 1];
-  $I4[($SP) + 2] = $I4[($SP) + 2] + ($I4[($SP) + 5] >> 1) | 0;
-  $I4[_y + 2] = $I4[($SP) + 2];
-  $I4[($SP) + 3] = $I4[($SP) + 3] + ($I4[($SP) + 4] >> 1) | 0;
-  $I4[_y + 3] = $I4[($SP) + 3];
-  $I4[_y + 4] = $I4[($SP) + 3] - $I4[($SP) + 4] | 0;
-  $I4[_y + 5] = $I4[($SP) + 2] - $I4[($SP) + 5] | 0;
-  $I4[_y + 6] = $I4[($SP) + 1] - $I4[($SP) + 6] | 0;
-  $I4[_y + 7] = $I4[($SP) + 0] - $I4[($SP) + 7] | 0;
-  $U4[1] += 16;
+var HEAP32 = window.memory.I4;
+function od_pre_filter8($_y,$_x) {
+ $_y = $_y|0;
+ $_x = $_x|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $17 = 0, $18 = 0, $19 = 0, $2 = 0, $20 = 0, $21 = 0, $22 = 0, $23 = 0, $24 = 0, $25 = 0, $26 = 0;
+ var $27 = 0, $28 = 0, $29 = 0, $3 = 0, $30 = 0, $31 = 0, $32 = 0, $33 = 0, $34 = 0, $35 = 0, $36 = 0, $37 = 0, $38 = 0, $39 = 0, $4 = 0, $40 = 0, $41 = 0, $42 = 0, $43 = 0, $44 = 0;
+ var $45 = 0, $46 = 0, $47 = 0, $48 = 0, $49 = 0, $5 = 0, $50 = 0, $51 = 0, $52 = 0, $53 = 0, $54 = 0, $55 = 0, $56 = 0, $57 = 0, $58 = 0, $59 = 0, $6 = 0, $60 = 0, $61 = 0, $62 = 0;
+ var $63 = 0, $64 = 0, $65 = 0, $66 = 0, $67 = 0, $68 = 0, $69 = 0, $7 = 0, $70 = 0, $71 = 0, $72 = 0, $73 = 0, $74 = 0, $75 = 0, $76 = 0, $77 = 0, $78 = 0, $79 = 0, $8 = 0, $80 = 0;
+ var $81 = 0, $82 = 0, $83 = 0, $84 = 0, $85 = 0, $86 = 0, $87 = 0, $88 = 0, $89 = 0, $9 = 0, label = 0;
+ $0 = HEAP32[$_x>>2]|0;
+ $1 = ((($_x)) + 28|0);
+ $2 = HEAP32[$1>>2]|0;
+ $3 = (($0) - ($2))|0;
+ $4 = ((($_x)) + 4|0);
+ $5 = HEAP32[$4>>2]|0;
+ $6 = ((($_x)) + 24|0);
+ $7 = HEAP32[$6>>2]|0;
+ $8 = (($5) - ($7))|0;
+ $9 = ((($_x)) + 8|0);
+ $10 = HEAP32[$9>>2]|0;
+ $11 = ((($_x)) + 20|0);
+ $12 = HEAP32[$11>>2]|0;
+ $13 = (($10) - ($12))|0;
+ $14 = ((($_x)) + 12|0);
+ $15 = HEAP32[$14>>2]|0;
+ $16 = ((($_x)) + 16|0);
+ $17 = HEAP32[$16>>2]|0;
+ $18 = (($15) - ($17))|0;
+ $19 = $18 >> 1;
+ $20 = (($15) - ($19))|0;
+ $21 = $13 >> 1;
+ $22 = (($10) - ($21))|0;
+ $23 = $8 >> 1;
+ $24 = (($5) - ($23))|0;
+ $25 = $3 >> 1;
+ $26 = (($0) - ($25))|0;
+ $27 = ($18*93)|0;
+ $28 = $27 >> 6;
+ $29 = (0 - ($28))|0;
+ $30 = $29 >>> 31;
+ $31 = (($30) + ($28))|0;
+ $32 = ($13*72)|0;
+ $33 = $32 >> 6;
+ $34 = (0 - ($33))|0;
+ $35 = $34 >>> 31;
+ $36 = (($35) + ($33))|0;
+ $37 = ($8*73)|0;
+ $38 = $37 >> 6;
+ $39 = (0 - ($38))|0;
+ $40 = $39 >>> 31;
+ $41 = (($40) + ($38))|0;
+ $42 = ($3*78)|0;
+ $43 = $42 >> 6;
+ $44 = (0 - ($43))|0;
+ $45 = $44 >>> 31;
+ $46 = (($45) + ($43))|0;
+ $47 = Math.imul($41, -10)|0;
+ $48 = (($47) + 32)|0;
+ $49 = $48 >> 6;
+ $50 = (($46) + ($49))|0;
+ $51 = ($50*23)|0;
+ $52 = (($51) + 32)|0;
+ $53 = $52 >> 6;
+ $54 = Math.imul($36, -23)|0;
+ $55 = (($54) + 32)|0;
+ $56 = $55 >> 6;
+ $57 = (($56) + ($41))|0;
+ $58 = (($57) + ($53))|0;
+ $59 = ($58*37)|0;
+ $60 = (($59) + 32)|0;
+ $61 = $60 >> 6;
+ $62 = Math.imul($31, -28)|0;
+ $63 = (($62) + 32)|0;
+ $64 = $63 >> 6;
+ $65 = (($64) + ($36))|0;
+ $66 = (($65) + ($61))|0;
+ $67 = ($66*50)|0;
+ $68 = (($67) + 32)|0;
+ $69 = $68 >> 6;
+ $70 = (($69) + ($31))|0;
+ $71 = $50 >> 1;
+ $72 = (($71) + ($26))|0;
+ HEAP32[$_y>>2] = $72;
+ $73 = $58 >> 1;
+ $74 = (($73) + ($24))|0;
+ $75 = ((($_y)) + 4|0);
+ HEAP32[$75>>2] = $74;
+ $76 = $66 >> 1;
+ $77 = (($76) + ($22))|0;
+ $78 = ((($_y)) + 8|0);
+ HEAP32[$78>>2] = $77;
+ $79 = $70 >> 1;
+ $80 = (($79) + ($20))|0;
+ $81 = ((($_y)) + 12|0);
+ HEAP32[$81>>2] = $80;
+ $82 = (($80) - ($70))|0;
+ $83 = ((($_y)) + 16|0);
+ HEAP32[$83>>2] = $82;
+ $84 = (($77) - ($66))|0;
+ $85 = ((($_y)) + 20|0);
+ HEAP32[$85>>2] = $84;
+ $86 = (($74) - ($58))|0;
+ $87 = ((($_y)) + 24|0);
+ HEAP32[$87>>2] = $86;
+ $88 = (($72) - ($50))|0;
+ $89 = ((($_y)) + 28|0);
+ HEAP32[$89>>2] = $88;
+ return;
 }
-function od_post_filter8(_x, _y) {
-  const $I4 = $M.I4, $U4 = $M.U4;
-  var _;
-  const $SP = $U4[1] -= 16;
-  var _;
-  $I4[($SP) + 7] = $I4[_y + 0] - $I4[_y + 7] | 0;
-  $I4[($SP) + 6] = $I4[_y + 1] - $I4[_y + 6] | 0;
-  $I4[($SP) + 5] = $I4[_y + 2] - $I4[_y + 5] | 0;
-  $I4[($SP) + 4] = $I4[_y + 3] - $I4[_y + 4] | 0;
-  $I4[($SP) + 3] = $I4[_y + 3] - ($I4[($SP) + 4] >> 1) | 0;
-  $I4[($SP) + 2] = $I4[_y + 2] - ($I4[($SP) + 5] >> 1) | 0;
-  $I4[($SP) + 1] = $I4[_y + 1] - ($I4[($SP) + 6] >> 1) | 0;
-  $I4[($SP) + 0] = $I4[_y + 0] - ($I4[($SP) + 7] >> 1) | 0;
-  $I4[($SP) + 4] = $I4[($SP) + 4] - ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_7 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 5] = $I4[($SP) + 5] - ((($I4[($SP) + 4] * OD_FILTER_PARAMS8_4 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 5] = $I4[($SP) + 5] - ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_8 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 6] = $I4[($SP) + 6] - ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_5 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 6] = $I4[($SP) + 6] - ((($I4[($SP) + 7] * OD_FILTER_PARAMS8_9 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 7] = $I4[($SP) + 7] - ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_6 | 0) + 32 | 0) >> 6) | 0;
-  $I4[($SP) + 7] = ($I4[($SP) + 7] << 6) / OD_FILTER_PARAMS8_3 | 0;
-  $I4[($SP) + 6] = ($I4[($SP) + 6] << 6) / OD_FILTER_PARAMS8_2 | 0;
-  $I4[($SP) + 5] = ($I4[($SP) + 5] << 6) / OD_FILTER_PARAMS8_1 | 0;
-  $I4[($SP) + 4] = ($I4[($SP) + 4] << 6) / OD_FILTER_PARAMS8_0 | 0;
-  $I4[($SP) + 0] = $I4[($SP) + 0] + ($I4[($SP) + 7] >> 1) | 0;
-  $I4[_x + 0] = $I4[($SP) + 0];
-  $I4[($SP) + 1] = $I4[($SP) + 1] + ($I4[($SP) + 6] >> 1) | 0;
-  $I4[_x + 1] = $I4[($SP) + 1];
-  $I4[($SP) + 2] = $I4[($SP) + 2] + ($I4[($SP) + 5] >> 1) | 0;
-  $I4[_x + 2] = $I4[($SP) + 2];
-  $I4[($SP) + 3] = $I4[($SP) + 3] + ($I4[($SP) + 4] >> 1) | 0;
-  $I4[_x + 3] = $I4[($SP) + 3];
-  $I4[_x + 4] = $I4[($SP) + 3] - $I4[($SP) + 4] | 0;
-  $I4[_x + 5] = $I4[($SP) + 2] - $I4[($SP) + 5] | 0;
-  $I4[_x + 6] = $I4[($SP) + 1] - $I4[($SP) + 6] | 0;
-  $I4[_x + 7] = $I4[($SP) + 0] - $I4[($SP) + 7] | 0;
-  $U4[1] += 16;
+function od_post_filter8($_x,$_y) {
+ $_x = $_x|0;
+ $_y = $_y|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $17 = 0, $18 = 0, $19 = 0, $2 = 0, $20 = 0, $21 = 0, $22 = 0, $23 = 0, $24 = 0, $25 = 0, $26 = 0;
+ var $27 = 0, $28 = 0, $29 = 0, $3 = 0, $30 = 0, $31 = 0, $32 = 0, $33 = 0, $34 = 0, $35 = 0, $36 = 0, $37 = 0, $38 = 0, $39 = 0, $4 = 0, $40 = 0, $41 = 0, $42 = 0, $43 = 0, $44 = 0;
+ var $45 = 0, $46 = 0, $47 = 0, $48 = 0, $49 = 0, $5 = 0, $50 = 0, $51 = 0, $52 = 0, $53 = 0, $54 = 0, $55 = 0, $56 = 0, $57 = 0, $58 = 0, $59 = 0, $6 = 0, $60 = 0, $61 = 0, $62 = 0;
+ var $63 = 0, $64 = 0, $65 = 0, $66 = 0, $67 = 0, $68 = 0, $69 = 0, $7 = 0, $70 = 0, $71 = 0, $72 = 0, $73 = 0, $74 = 0, $75 = 0, $76 = 0, $77 = 0, $8 = 0, $9 = 0, label = 0;
+ $0 = HEAP32[$_y>>2]|0;
+ $1 = ((($_y)) + 28|0);
+ $2 = HEAP32[$1>>2]|0;
+ $3 = (($0) - ($2))|0;
+ $4 = ((($_y)) + 4|0);
+ $5 = HEAP32[$4>>2]|0;
+ $6 = ((($_y)) + 24|0);
+ $7 = HEAP32[$6>>2]|0;
+ $8 = (($5) - ($7))|0;
+ $9 = ((($_y)) + 8|0);
+ $10 = HEAP32[$9>>2]|0;
+ $11 = ((($_y)) + 20|0);
+ $12 = HEAP32[$11>>2]|0;
+ $13 = (($10) - ($12))|0;
+ $14 = ((($_y)) + 12|0);
+ $15 = HEAP32[$14>>2]|0;
+ $16 = ((($_y)) + 16|0);
+ $17 = HEAP32[$16>>2]|0;
+ $18 = (($15) - ($17))|0;
+ $19 = $18 >> 1;
+ $20 = (($15) - ($19))|0;
+ $21 = $13 >> 1;
+ $22 = (($10) - ($21))|0;
+ $23 = $8 >> 1;
+ $24 = (($5) - ($23))|0;
+ $25 = $3 >> 1;
+ $26 = (($0) - ($25))|0;
+ $27 = ($13*50)|0;
+ $28 = (($27) + 32)|0;
+ $29 = $28 >> 6;
+ $30 = (($18) - ($29))|0;
+ $31 = Math.imul($30, -28)|0;
+ $32 = (($31) + 32)|0;
+ $33 = $32 >> 6;
+ $34 = (($13) - ($33))|0;
+ $35 = ($8*37)|0;
+ $36 = (($35) + 32)|0;
+ $37 = $36 >> 6;
+ $38 = (($34) - ($37))|0;
+ $39 = Math.imul($38, -23)|0;
+ $40 = (($39) + 32)|0;
+ $41 = $40 >> 6;
+ $42 = (($8) - ($41))|0;
+ $43 = ($3*23)|0;
+ $44 = (($43) + 32)|0;
+ $45 = $44 >> 6;
+ $46 = (($42) - ($45))|0;
+ $47 = Math.imul($46, -10)|0;
+ $48 = (($47) + 32)|0;
+ $49 = $48 >>> 6;
+ $50 = (($3) - ($49))|0;
+ $51 = $50 << 6;
+ $52 = (($51|0) / 78)&-1;
+ $53 = $46 << 6;
+ $54 = (($53|0) / 73)&-1;
+ $55 = $38 << 6;
+ $56 = (($55|0) / 72)&-1;
+ $57 = $30 << 6;
+ $58 = (($57|0) / 93)&-1;
+ $59 = $52 >> 1;
+ $60 = (($59) + ($26))|0;
+ HEAP32[$_x>>2] = $60;
+ $61 = $54 >> 1;
+ $62 = (($61) + ($24))|0;
+ $63 = ((($_x)) + 4|0);
+ HEAP32[$63>>2] = $62;
+ $64 = $56 >> 1;
+ $65 = (($64) + ($22))|0;
+ $66 = ((($_x)) + 8|0);
+ HEAP32[$66>>2] = $65;
+ $67 = $58 >> 1;
+ $68 = (($67) + ($20))|0;
+ $69 = ((($_x)) + 12|0);
+ HEAP32[$69>>2] = $68;
+ $70 = (($68) - ($58))|0;
+ $71 = ((($_x)) + 16|0);
+ HEAP32[$71>>2] = $70;
+ $72 = (($65) - ($56))|0;
+ $73 = ((($_x)) + 20|0);
+ HEAP32[$73>>2] = $72;
+ $74 = (($62) - ($54))|0;
+ $75 = ((($_x)) + 24|0);
+ HEAP32[$75>>2] = $74;
+ $76 = (($60) - ($52))|0;
+ $77 = ((($_x)) + 28|0);
+ HEAP32[$77>>2] = $76;
+ return;
 }
