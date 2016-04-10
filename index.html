@@ -1,5 +1,6 @@
 <!doctype html>
 <html>
+<script src="canvas-to-blob.js"></script>
 <script src="LLJS/src/memcheck.js"></script>
 <script src="LLJS/src/memory.js"></script>
 <script>
@@ -58,14 +59,24 @@ function foo() {
   var imagebuffer = window.memory.I4.subarray(imageptr, w * h * 3);
   rgb2ycbco(image.data, imagebuffer, w*h);
   var ts = new Date();
-  lapvert(imageptr<<2, w*h);
-  console.log(new Date() - ts);ts = new Date();
-  /*
-  unlapvert(imageptr, w*h);
-  console.log(new Date() - ts);ts = new Date();
-  */
+  lapvert((imageptr+4)<<2, w*h);
+  console.log(new Date() - ts);
   ycbco2rgb(imagebuffer, image.data, w*h);
   ctx.putImageData(image, 0, 0);
+  canvas.toBlob(function(blob){
+    var img = new Image;
+    img.onload = function() {
+        ctx.drawImage(img, 0, 0);
+        var image = ctx.getImageData(0, 0, w, h);
+        rgb2ycbco(image.data, imagebuffer, w*h);
+        var ts = new Date();
+        unlapvert(imageptr+4, w*h);
+        console.log(new Date() - ts);ts = new Date();
+        ycbco2rgb(imagebuffer, image.data, w*h);
+        ctx.putImageData(image, 0, 0);
+    };
+    img.src = URL.createObjectURL(blob);
+  }, "image/jpeg", 0.1);
 }
 </script>
 <img id="srcimage" style="display:none;" src="Clovisfest.png" onload="foo();"/>
