@@ -37,13 +37,6 @@ function ycbco2rgb(inbuf, outbuf, pixels) {
     i = i+1;
   }
 }
-function lapvert(bufptr, pixels) {
-  var i = 0;
-  while (i < pixels * 3) {
-    od_pre_filter8((bufptr + i * 8)<<2, (bufptr + i * 8)<<2);
-    i = i+1;
-  }
-}
 function unlapvert(bufptr, pixels) {
   var i = 0;
   while (i < pixels * 3) {
@@ -65,7 +58,7 @@ function foo() {
   var imagebuffer = window.memory.I4.subarray(imageptr, w * h * 3);
   rgb2ycbco(image.data, imagebuffer, w*h);
   var ts = new Date();
-  lapvert(imageptr, w*h);
+  lapvert(imageptr<<2, w*h);
   console.log(new Date() - ts);ts = new Date();
   /*
   unlapvert(imageptr, w*h);
