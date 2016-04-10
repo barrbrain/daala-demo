@@ -83,8 +83,12 @@ function foo() {
   }, "image/jpeg", 0.4);
 }
 </script>
+<h1>Original image</h1>
 <img id="srcimage" src="Clovisfest.png" onload="foo();"/>
+<h1>8-point lapping (inverse deblocking filter)</h1>
 <canvas id='canvas' width=1 height=1></canvas>
+<h1>JPEG compression (8x8 DCT)</h1>
 <canvas id='canvas2' width=1 height=1></canvas>
+<h1>8-point lapping (deblocking filter)</h1>
 <canvas id='canvas3' width=1 height=1></canvas>
 </body>
