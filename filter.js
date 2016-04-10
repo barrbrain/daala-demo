@@ -1,6 +1,6 @@
-typedef i32 od_coeff;
-const i32 OD_COEFF_BITS = (32);
-
+const $M = require('memory');
+$M.set_memcheck(false);
+const OD_COEFF_BITS = 32;
 /*Daala video codec
 Copyright (c) 2003-2010 Daala project contributors.  All rights reserved.
 
@@ -24,7 +24,6 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
-
 /*Pre-/post-filter pairs of various sizes.
   For a FIR, PR, LP filter bank, the pre-filter must have the structure:
 
@@ -103,7 +102,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    defines are set.
 
   The maximum denominator for all coefficients was allowed to be 64.*/
-
 /*R=f
   6-bit
   Subset3_2d_Cg = 16.7948051638528391
@@ -113,94 +111,100 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    of 16.8035257369844686. The small cg loss is likely
    worth the reduction in multiplies and adds.*/
 /*Optimal 1d subset3 Cg*/
-const i32 OD_FILTER_PARAMS8_0 = (93);
-const i32 OD_FILTER_PARAMS8_1 = (72);
-const i32 OD_FILTER_PARAMS8_2 = (73);
-const i32 OD_FILTER_PARAMS8_3 = (78);
-const i32 OD_FILTER_PARAMS8_4 = (-28);
-const i32 OD_FILTER_PARAMS8_5 = (-23);
-const i32 OD_FILTER_PARAMS8_6 = (-10);
-const i32 OD_FILTER_PARAMS8_7 = (50);
-const i32 OD_FILTER_PARAMS8_8 = (37);
-const i32 OD_FILTER_PARAMS8_9 = (23);
-
-function od_pre_filter8(od_coeff *_y, od_coeff *_x) {
-  let i32 t[8];
+const OD_FILTER_PARAMS8_0 = 93;
+const OD_FILTER_PARAMS8_1 = 72;
+const OD_FILTER_PARAMS8_2 = 73;
+const OD_FILTER_PARAMS8_3 = 78;
+const OD_FILTER_PARAMS8_4 = -28;
+const OD_FILTER_PARAMS8_5 = -23;
+const OD_FILTER_PARAMS8_6 = -10;
+const OD_FILTER_PARAMS8_7 = 50;
+const OD_FILTER_PARAMS8_8 = 37;
+const OD_FILTER_PARAMS8_9 = 23;
+function od_pre_filter8(_y, _x) {
+  const $I4 = $M.I4, $U4 = $M.U4;
+  var _;
+  const $SP = $U4[1] -= 16;
+  var _;
   /*+1/-1 butterflies (required for FIR, PR, LP).*/
-  t[7] = _x[0]-_x[7];
-  t[6] = _x[1]-_x[6];
-  t[5] = _x[2]-_x[5];
-  t[4] = _x[3]-_x[4];
-  t[3] = _x[3]-(t[4]>>1);
-  t[2] = _x[2]-(t[5]>>1);
-  t[1] = _x[1]-(t[6]>>1);
-  t[0] = _x[0]-(t[7]>>1);
+  $I4[($SP) + 7] = $I4[_x + 0] - $I4[_x + 7] | 0;
+  $I4[($SP) + 6] = $I4[_x + 1] - $I4[_x + 6] | 0;
+  $I4[($SP) + 5] = $I4[_x + 2] - $I4[_x + 5] | 0;
+  $I4[($SP) + 4] = $I4[_x + 3] - $I4[_x + 4] | 0;
+  $I4[($SP) + 3] = $I4[_x + 3] - ($I4[($SP) + 4] >> 1) | 0;
+  $I4[($SP) + 2] = $I4[_x + 2] - ($I4[($SP) + 5] >> 1) | 0;
+  $I4[($SP) + 1] = $I4[_x + 1] - ($I4[($SP) + 6] >> 1) | 0;
+  $I4[($SP) + 0] = $I4[_x + 0] - ($I4[($SP) + 7] >> 1) | 0;
   /*U filter (arbitrary invertible, omitted).*/
   /*V filter (arbitrary invertible, can be optimized for speed or accuracy).*/
   /*Scaling factors: the biorthogonal part.*/
   /*Note: t[i]+=t[i]>>(OD_COEFF_BITS-1)&1; is equivalent to: if(t[i]>0)t[i]++;
     This step ensures that the scaling is trivially invertible on the
      decoder's side, with perfect reconstruction.*/
-  t[4] = (t[4]*OD_FILTER_PARAMS8_0)>>6;
-  t[4] += -t[4]>>(OD_COEFF_BITS-1)&1;
-  t[5] = (t[5]*OD_FILTER_PARAMS8_1)>>6;
-  t[5] += -t[5]>>(OD_COEFF_BITS-1)&1;
-  t[6] = (t[6]*OD_FILTER_PARAMS8_2)>>6;
-  t[6] += -t[6]>>(OD_COEFF_BITS-1)&1;
-  t[7] = (t[7]*OD_FILTER_PARAMS8_3)>>6;
-  t[7] += -t[7]>>(OD_COEFF_BITS-1)&1;
+  $I4[($SP) + 4] = ($I4[($SP) + 4] * OD_FILTER_PARAMS8_0 | 0) >> 6;
+  $I4[($SP) + 4] = $I4[($SP) + 4] + (-$I4[($SP) + 4] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
+  $I4[($SP) + 5] = ($I4[($SP) + 5] * OD_FILTER_PARAMS8_1 | 0) >> 6;
+  $I4[($SP) + 5] = $I4[($SP) + 5] + (-$I4[($SP) + 5] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
+  $I4[($SP) + 6] = ($I4[($SP) + 6] * OD_FILTER_PARAMS8_2 | 0) >> 6;
+  $I4[($SP) + 6] = $I4[($SP) + 6] + (-$I4[($SP) + 6] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
+  $I4[($SP) + 7] = ($I4[($SP) + 7] * OD_FILTER_PARAMS8_3 | 0) >> 6;
+  $I4[($SP) + 7] = $I4[($SP) + 7] + (-$I4[($SP) + 7] >> (OD_COEFF_BITS - 1 | 0) & 1) | 0;
   /*Rotations:*/
-  t[7] += (t[6]*OD_FILTER_PARAMS8_6+32)>>6;
-  t[6] += (t[7]*OD_FILTER_PARAMS8_9+32)>>6;
-  t[6] += (t[5]*OD_FILTER_PARAMS8_5+32)>>6;
-  t[5] += (t[6]*OD_FILTER_PARAMS8_8+32)>>6;
-  t[5] += (t[4]*OD_FILTER_PARAMS8_4+32)>>6;
-  t[4] += (t[5]*OD_FILTER_PARAMS8_7+32)>>6;
+  $I4[($SP) + 7] = $I4[($SP) + 7] + ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_6 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 6] = $I4[($SP) + 6] + ((($I4[($SP) + 7] * OD_FILTER_PARAMS8_9 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 6] = $I4[($SP) + 6] + ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_5 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 5] = $I4[($SP) + 5] + ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_8 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 5] = $I4[($SP) + 5] + ((($I4[($SP) + 4] * OD_FILTER_PARAMS8_4 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 4] = $I4[($SP) + 4] + ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_7 | 0) + 32 | 0) >> 6) | 0;
   /*More +1/-1 butterflies (required for FIR, PR, LP).*/
-  t[0] += t[7]>>1;
-  _y[0] = t[0];
-  t[1] += t[6]>>1;
-  _y[1] = t[1];
-  t[2] += t[5]>>1;
-  _y[2] = t[2];
-  t[3] += t[4]>>1;
-  _y[3] = t[3];
-  _y[4] = (t[3]-t[4]);
-  _y[5] = (t[2]-t[5]);
-  _y[6] = (t[1]-t[6]);
-  _y[7] = (t[0]-t[7]);
+  $I4[($SP) + 0] = $I4[($SP) + 0] + ($I4[($SP) + 7] >> 1) | 0;
+  $I4[_y + 0] = $I4[($SP) + 0];
+  $I4[($SP) + 1] = $I4[($SP) + 1] + ($I4[($SP) + 6] >> 1) | 0;
+  $I4[_y + 1] = $I4[($SP) + 1];
+  $I4[($SP) + 2] = $I4[($SP) + 2] + ($I4[($SP) + 5] >> 1) | 0;
+  $I4[_y + 2] = $I4[($SP) + 2];
+  $I4[($SP) + 3] = $I4[($SP) + 3] + ($I4[($SP) + 4] >> 1) | 0;
+  $I4[_y + 3] = $I4[($SP) + 3];
+  $I4[_y + 4] = $I4[($SP) + 3] - $I4[($SP) + 4] | 0;
+  $I4[_y + 5] = $I4[($SP) + 2] - $I4[($SP) + 5] | 0;
+  $I4[_y + 6] = $I4[($SP) + 1] - $I4[($SP) + 6] | 0;
+  $I4[_y + 7] = $I4[($SP) + 0] - $I4[($SP) + 7] | 0;
+  $U4[1] += 16;
 }
-
-function od_post_filter8(od_coeff *_x, od_coeff *_y) {
-  let i32 t[8];
-  t[7] = _y[0]-_y[7];
-  t[6] = _y[1]-_y[6];
-  t[5] = _y[2]-_y[5];
-  t[4] = _y[3]-_y[4];
-  t[3] = _y[3]-(t[4]>>1);
-  t[2] = _y[2]-(t[5]>>1);
-  t[1] = _y[1]-(t[6]>>1);
-  t[0] = _y[0]-(t[7]>>1);
-  t[4] -= (t[5]*OD_FILTER_PARAMS8_7+32)>>6;
-  t[5] -= (t[4]*OD_FILTER_PARAMS8_4+32)>>6;
-  t[5] -= (t[6]*OD_FILTER_PARAMS8_8+32)>>6;
-  t[6] -= (t[5]*OD_FILTER_PARAMS8_5+32)>>6;
-  t[6] -= (t[7]*OD_FILTER_PARAMS8_9+32)>>6;
-  t[7] -= (t[6]*OD_FILTER_PARAMS8_6+32)>>6;
-  t[7] = (t[7]<<6)/OD_FILTER_PARAMS8_3;
-  t[6] = (t[6]<<6)/OD_FILTER_PARAMS8_2;
-  t[5] = (t[5]<<6)/OD_FILTER_PARAMS8_1;
-  t[4] = (t[4]<<6)/OD_FILTER_PARAMS8_0;
-  t[0] += t[7]>>1;
-  _x[0] = t[0];
-  t[1] += t[6]>>1;
-  _x[1] = t[1];
-  t[2] += t[5]>>1;
-  _x[2] = t[2];
-  t[3] += t[4]>>1;
-  _x[3] = t[3];
-  _x[4] = (t[3]-t[4]);
-  _x[5] = (t[2]-t[5]);
-  _x[6] = (t[1]-t[6]);
-  _x[7] = (t[0]-t[7]);
+function od_post_filter8(_x, _y) {
+  const $I4 = $M.I4, $U4 = $M.U4;
+  var _;
+  const $SP = $U4[1] -= 16;
+  var _;
+  $I4[($SP) + 7] = $I4[_y + 0] - $I4[_y + 7] | 0;
+  $I4[($SP) + 6] = $I4[_y + 1] - $I4[_y + 6] | 0;
+  $I4[($SP) + 5] = $I4[_y + 2] - $I4[_y + 5] | 0;
+  $I4[($SP) + 4] = $I4[_y + 3] - $I4[_y + 4] | 0;
+  $I4[($SP) + 3] = $I4[_y + 3] - ($I4[($SP) + 4] >> 1) | 0;
+  $I4[($SP) + 2] = $I4[_y + 2] - ($I4[($SP) + 5] >> 1) | 0;
+  $I4[($SP) + 1] = $I4[_y + 1] - ($I4[($SP) + 6] >> 1) | 0;
+  $I4[($SP) + 0] = $I4[_y + 0] - ($I4[($SP) + 7] >> 1) | 0;
+  $I4[($SP) + 4] = $I4[($SP) + 4] - ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_7 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 5] = $I4[($SP) + 5] - ((($I4[($SP) + 4] * OD_FILTER_PARAMS8_4 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 5] = $I4[($SP) + 5] - ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_8 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 6] = $I4[($SP) + 6] - ((($I4[($SP) + 5] * OD_FILTER_PARAMS8_5 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 6] = $I4[($SP) + 6] - ((($I4[($SP) + 7] * OD_FILTER_PARAMS8_9 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 7] = $I4[($SP) + 7] - ((($I4[($SP) + 6] * OD_FILTER_PARAMS8_6 | 0) + 32 | 0) >> 6) | 0;
+  $I4[($SP) + 7] = ($I4[($SP) + 7] << 6) / OD_FILTER_PARAMS8_3 | 0;
+  $I4[($SP) + 6] = ($I4[($SP) + 6] << 6) / OD_FILTER_PARAMS8_2 | 0;
+  $I4[($SP) + 5] = ($I4[($SP) + 5] << 6) / OD_FILTER_PARAMS8_1 | 0;
+  $I4[($SP) + 4] = ($I4[($SP) + 4] << 6) / OD_FILTER_PARAMS8_0 | 0;
+  $I4[($SP) + 0] = $I4[($SP) + 0] + ($I4[($SP) + 7] >> 1) | 0;
+  $I4[_x + 0] = $I4[($SP) + 0];
+  $I4[($SP) + 1] = $I4[($SP) + 1] + ($I4[($SP) + 6] >> 1) | 0;
+  $I4[_x + 1] = $I4[($SP) + 1];
+  $I4[($SP) + 2] = $I4[($SP) + 2] + ($I4[($SP) + 5] >> 1) | 0;
+  $I4[_x + 2] = $I4[($SP) + 2];
+  $I4[($SP) + 3] = $I4[($SP) + 3] + ($I4[($SP) + 4] >> 1) | 0;
+  $I4[_x + 3] = $I4[($SP) + 3];
+  $I4[_x + 4] = $I4[($SP) + 3] - $I4[($SP) + 4] | 0;
+  $I4[_x + 5] = $I4[($SP) + 2] - $I4[($SP) + 5] | 0;
+  $I4[_x + 6] = $I4[($SP) + 1] - $I4[($SP) + 6] | 0;
+  $I4[_x + 7] = $I4[($SP) + 0] - $I4[($SP) + 7] | 0;
+  $U4[1] += 16;
 }
