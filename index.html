@@ -59,6 +59,10 @@ function foo() {
   canvas.toBlob(function(blob){
     var img = new Image;
     img.onload = function() {
+	var canvas = document.getElementById('canvas2');
+	canvas.width = w;
+	canvas.height = h;
+	var ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
         var image = ctx.getImageData(0, 0, w, h);
         rgb2ycbco(image.data, imagebuffer, w*h);
@@ -66,12 +70,18 @@ function foo() {
         unlapvert(imageptr+4, w*h);
         console.log(new Date() - ts);ts = new Date();
         ycbco2rgb(imagebuffer, image.data, w*h);
+	canvas = document.getElementById('canvas3');
+	canvas.width = w;
+	canvas.height = h;
+	ctx = canvas.getContext('2d');
         ctx.putImageData(image, 0, 0);
     };
     img.src = URL.createObjectURL(blob);
   }, "image/jpeg", 0.1);
 }
 </script>
-<img id="srcimage" style="display:none;" src="Clovisfest.png" onload="foo();"/>
+<img id="srcimage" src="Clovisfest.png" onload="foo();"/>
 <canvas id='canvas' width=1 height=1></canvas>
+<canvas id='canvas2' width=1 height=1></canvas>
+<canvas id='canvas3' width=1 height=1></canvas>
 </body>
