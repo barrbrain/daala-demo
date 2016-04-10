@@ -38,13 +38,6 @@ function ycbco2rgb(inbuf, outbuf, pixels) {
     i = i+1;
   }
 }
-function unlapvert(bufptr, pixels) {
-  var i = 0;
-  while (i < pixels * 3) {
-    od_post_filter8((bufptr + i * 8)<<2, (bufptr + i * 8)<<2);
-    i = i+1;
-  }
-}
 function foo() {
   var canvas = document.getElementById('canvas');
   var srcimage = document.getElementById('srcimage');

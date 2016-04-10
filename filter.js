@@ -234,8 +234,39 @@ function lapvert($bufptr,$pixels) {
  return;
 }
 
-return {od_pre_filter8: od_pre_filter8, od_post_filter8: od_post_filter8, lapvert:lapvert};
+function unlapvert($bufptr,$pixels) {
+ $bufptr = $bufptr|0;
+ $pixels = $pixels|0;
+ var $0 = 0, $1 = 0, $2 = 0, $3 = 0, $4 = 0, $5 = 0, $i$01 = 0, label = 0;
+ $0 = ($pixels*3)|0;
+ $1 = ($pixels|0)>(0);
+ if ($1) {
+  $i$01 = 0;
+ } else {
+  return;
+ }
+ while(1) {
+  $2 = $i$01 << 3;
+  $3 = (($bufptr) + ($2<<2)|0);
+  od_post_filter8($3,$3);
+  $4 = (($i$01) + 1)|0;
+  $5 = ($4|0)<($0|0);
+  if ($5) {
+   $i$01 = $4;
+  } else {
+   break;
+  }
+ }
+ return;
+}
+
+return {
+od_pre_filter8: od_pre_filter8,
+od_post_filter8: od_post_filter8,
+lapvert:lapvert,
+unlapvert:unlapvert};
 })(window, null, window.memory.M);
 window.od_pre_filter8 = asm.od_pre_filter8;
 window.od_post_filter8 = asm.od_post_filter8;
 window.lapvert = asm.lapvert;
+window.unlapvert = asm.unlapvert;
