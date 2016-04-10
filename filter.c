@@ -1,6 +1,3 @@
-typedef i32 od_coeff;
-const i32 OD_COEFF_BITS = (32);
-
 /*Daala video codec
 Copyright (c) 2003-2010 Daala project contributors.  All rights reserved.
 
@@ -104,6 +101,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
   The maximum denominator for all coefficients was allowed to be 64.*/
 
+#include<emscripten.h>
+typedef int od_coeff;
+# define OD_COEFF_BITS (32)
+
 /*R=f
   6-bit
   Subset3_2d_Cg = 16.7948051638528391
@@ -113,19 +114,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
    of 16.8035257369844686. The small cg loss is likely
    worth the reduction in multiplies and adds.*/
 /*Optimal 1d subset3 Cg*/
-const i32 OD_FILTER_PARAMS8_0 = (93);
-const i32 OD_FILTER_PARAMS8_1 = (72);
-const i32 OD_FILTER_PARAMS8_2 = (73);
-const i32 OD_FILTER_PARAMS8_3 = (78);
-const i32 OD_FILTER_PARAMS8_4 = (-28);
-const i32 OD_FILTER_PARAMS8_5 = (-23);
-const i32 OD_FILTER_PARAMS8_6 = (-10);
-const i32 OD_FILTER_PARAMS8_7 = (50);
-const i32 OD_FILTER_PARAMS8_8 = (37);
-const i32 OD_FILTER_PARAMS8_9 = (23);
+# define OD_FILTER_PARAMS8_0 (93)
+# define OD_FILTER_PARAMS8_1 (72)
+# define OD_FILTER_PARAMS8_2 (73)
+# define OD_FILTER_PARAMS8_3 (78)
+# define OD_FILTER_PARAMS8_4 (-28)
+# define OD_FILTER_PARAMS8_5 (-23)
+# define OD_FILTER_PARAMS8_6 (-10)
+# define OD_FILTER_PARAMS8_7 (50)
+# define OD_FILTER_PARAMS8_8 (37)
+# define OD_FILTER_PARAMS8_9 (23)
 
-function od_pre_filter8(od_coeff *_y, od_coeff *_x) {
-  let i32 t[8];
+EMSCRIPTEN_KEEPALIVE
+void od_pre_filter8(od_coeff _y[8], const od_coeff _x[8]) {
+  int t[8];
   /*+1/-1 butterflies (required for FIR, PR, LP).*/
   t[7] = _x[0]-_x[7];
   t[6] = _x[1]-_x[6];
@@ -158,21 +160,22 @@ function od_pre_filter8(od_coeff *_y, od_coeff *_x) {
   t[4] += (t[5]*OD_FILTER_PARAMS8_7+32)>>6;
   /*More +1/-1 butterflies (required for FIR, PR, LP).*/
   t[0] += t[7]>>1;
-  _y[0] = t[0];
+  _y[0] = (od_coeff)t[0];
   t[1] += t[6]>>1;
-  _y[1] = t[1];
+  _y[1] = (od_coeff)t[1];
   t[2] += t[5]>>1;
-  _y[2] = t[2];
+  _y[2] = (od_coeff)t[2];
   t[3] += t[4]>>1;
-  _y[3] = t[3];
-  _y[4] = (t[3]-t[4]);
-  _y[5] = (t[2]-t[5]);
-  _y[6] = (t[1]-t[6]);
-  _y[7] = (t[0]-t[7]);
+  _y[3] = (od_coeff)t[3];
+  _y[4] = (od_coeff)(t[3]-t[4]);
+  _y[5] = (od_coeff)(t[2]-t[5]);
+  _y[6] = (od_coeff)(t[1]-t[6]);
+  _y[7] = (od_coeff)(t[0]-t[7]);
 }
 
-function od_post_filter8(od_coeff *_x, od_coeff *_y) {
-  let i32 t[8];
+EMSCRIPTEN_KEEPALIVE
+void od_post_filter8(od_coeff _x[8], const od_coeff _y[8]) {
+  int t[8];
   t[7] = _y[0]-_y[7];
   t[6] = _y[1]-_y[6];
   t[5] = _y[2]-_y[5];
@@ -192,15 +195,96 @@ function od_post_filter8(od_coeff *_x, od_coeff *_y) {
   t[5] = (t[5]<<6)/OD_FILTER_PARAMS8_1;
   t[4] = (t[4]<<6)/OD_FILTER_PARAMS8_0;
   t[0] += t[7]>>1;
-  _x[0] = t[0];
+  _x[0] = (od_coeff)t[0];
   t[1] += t[6]>>1;
-  _x[1] = t[1];
+  _x[1] = (od_coeff)t[1];
   t[2] += t[5]>>1;
-  _x[2] = t[2];
+  _x[2] = (od_coeff)t[2];
   t[3] += t[4]>>1;
-  _x[3] = t[3];
-  _x[4] = (t[3]-t[4]);
-  _x[5] = (t[2]-t[5]);
-  _x[6] = (t[1]-t[6]);
-  _x[7] = (t[0]-t[7]);
+  _x[3] = (od_coeff)t[3];
+  _x[4] = (od_coeff)(t[3]-t[4]);
+  _x[5] = (od_coeff)(t[2]-t[5]);
+  _x[6] = (od_coeff)(t[1]-t[6]);
+  _x[7] = (od_coeff)(t[0]-t[7]);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void lapvert(od_coeff *bufptr, od_coeff pixels) {
+  od_coeff i = 0;
+  while (i < pixels * 3) {
+    od_pre_filter8(bufptr + i * 8, bufptr + i * 8);
+    i = i+1;
+  }
+}
+EMSCRIPTEN_KEEPALIVE
+void unlapvert(od_coeff *bufptr, od_coeff pixels) {
+  od_coeff i = 0;
+  while (i < pixels * 3) {
+    od_post_filter8(bufptr + i * 8, bufptr + i * 8);
+    i = i+1;
+  }
+}
+EMSCRIPTEN_KEEPALIVE
+void laphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
+  int i = 4;
+  int j = 0;
+  int p = 0;
+  while (i + 8 < h * 3) {
+    j = 0;
+    while (j < w) {
+      p = (i - 1) * w + j;
+      t[0] = bufptr[p += w];
+      t[1] = bufptr[p += w];
+      t[2] = bufptr[p += w];
+      t[3] = bufptr[p += w];
+      t[4] = bufptr[p += w];
+      t[5] = bufptr[p += w];
+      t[6] = bufptr[p += w];
+      t[7] = bufptr[p += w];
+      od_pre_filter8(t, t);
+      p -= 8 * w;
+      bufptr[p += w] = t[0];
+      bufptr[p += w] = t[1];
+      bufptr[p += w] = t[2];
+      bufptr[p += w] = t[3];
+      bufptr[p += w] = t[4];
+      bufptr[p += w] = t[5];
+      bufptr[p += w] = t[6];
+      bufptr[p += w] = t[7];
+      j = j + 1;
+    }
+    i = i+8;
+  }
+}
+EMSCRIPTEN_KEEPALIVE
+void unlaphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
+  int i = 4;
+  int j = 0;
+  int p = 0;
+  while (i + 8 < h * 3) {
+    j = 0;
+    while (j < w) {
+      p = (i - 1) * w + j;
+      t[0] = bufptr[p += w];
+      t[1] = bufptr[p += w];
+      t[2] = bufptr[p += w];
+      t[3] = bufptr[p += w];
+      t[4] = bufptr[p += w];
+      t[5] = bufptr[p += w];
+      t[6] = bufptr[p += w];
+      t[7] = bufptr[p += w];
+      od_post_filter8(t, t);
+      p -= 8 * w;
+      bufptr[p += w] = t[0];
+      bufptr[p += w] = t[1];
+      bufptr[p += w] = t[2];
+      bufptr[p += w] = t[3];
+      bufptr[p += w] = t[4];
+      bufptr[p += w] = t[5];
+      bufptr[p += w] = t[6];
+      bufptr[p += w] = t[7];
+      j = j + 1;
+    }
+    i = i+8;
+  }
 }
