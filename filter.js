@@ -1,4 +1,8 @@
-var HEAP32 = window.memory.I4;
+var asm = (function(global, foreign, buffer) {
+'use asm';
+var HEAP32 = new global.Int32Array(buffer);
+var Math_imul = global.Math.imul;
+
 function od_pre_filter8($_y,$_x) {
  $_y = $_y|0;
  $_x = $_x|0;
@@ -54,14 +58,14 @@ function od_pre_filter8($_y,$_x) {
  $44 = (0 - ($43))|0;
  $45 = $44 >>> 31;
  $46 = (($45) + ($43))|0;
- $47 = Math.imul($41, -10)|0;
+ $47 = Math_imul($41, -10)|0;
  $48 = (($47) + 32)|0;
  $49 = $48 >> 6;
  $50 = (($46) + ($49))|0;
  $51 = ($50*23)|0;
  $52 = (($51) + 32)|0;
  $53 = $52 >> 6;
- $54 = Math.imul($36, -23)|0;
+ $54 = Math_imul($36, -23)|0;
  $55 = (($54) + 32)|0;
  $56 = $55 >> 6;
  $57 = (($56) + ($41))|0;
@@ -69,7 +73,7 @@ function od_pre_filter8($_y,$_x) {
  $59 = ($58*37)|0;
  $60 = (($59) + 32)|0;
  $61 = $60 >> 6;
- $62 = Math.imul($31, -28)|0;
+ $62 = Math_imul($31, -28)|0;
  $63 = (($62) + 32)|0;
  $64 = $63 >> 6;
  $65 = (($64) + ($36))|0;
@@ -107,6 +111,7 @@ function od_pre_filter8($_y,$_x) {
  HEAP32[$89>>2] = $88;
  return;
 }
+
 function od_post_filter8($_x,$_y) {
  $_x = $_x|0;
  $_y = $_y|0;
@@ -145,7 +150,7 @@ function od_post_filter8($_x,$_y) {
  $28 = (($27) + 32)|0;
  $29 = $28 >> 6;
  $30 = (($18) - ($29))|0;
- $31 = Math.imul($30, -28)|0;
+ $31 = Math_imul($30, -28)|0;
  $32 = (($31) + 32)|0;
  $33 = $32 >> 6;
  $34 = (($13) - ($33))|0;
@@ -153,7 +158,7 @@ function od_post_filter8($_x,$_y) {
  $36 = (($35) + 32)|0;
  $37 = $36 >> 6;
  $38 = (($34) - ($37))|0;
- $39 = Math.imul($38, -23)|0;
+ $39 = Math_imul($38, -23)|0;
  $40 = (($39) + 32)|0;
  $41 = $40 >> 6;
  $42 = (($8) - ($41))|0;
@@ -161,7 +166,7 @@ function od_post_filter8($_x,$_y) {
  $44 = (($43) + 32)|0;
  $45 = $44 >> 6;
  $46 = (($42) - ($45))|0;
- $47 = Math.imul($46, -10)|0;
+ $47 = Math_imul($46, -10)|0;
  $48 = (($47) + 32)|0;
  $49 = $48 >>> 6;
  $50 = (($3) - ($49))|0;
@@ -202,3 +207,8 @@ function od_post_filter8($_x,$_y) {
  HEAP32[$77>>2] = $76;
  return;
 }
+
+return {od_pre_filter8: od_pre_filter8, od_post_filter8: od_post_filter8};
+})(window, null, window.memory.M);
+window.od_pre_filter8 = asm.od_pre_filter8;
+window.od_post_filter8 = asm.od_post_filter8;
