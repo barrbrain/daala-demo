@@ -336,7 +336,7 @@ lapvert:lapvert,
 unlapvert:unlapvert,
 laphorz:laphorz,
 unlaphorz:unlaphorz};
-})(window, null, window.memory.M);
+})(window, null, window.HEAP);
 window.od_pre_filter8 = asm.od_pre_filter8;
 window.od_post_filter8 = asm.od_post_filter8;
 window.lapvert = asm.lapvert;
