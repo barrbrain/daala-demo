@@ -106,190 +106,131 @@ typedef int od_coeff;
 # define OD_COEFF_BITS (32)
 
 /*R=f
-  6-bit
-  Subset3_2d_Cg = 16.7948051638528391
-  This filter has some of the scale factors
-   forced to one to reduce complexity. Without
-   this constraint we get a filter with Subset3_2d_Cg
-   of 16.8035257369844686. The small cg loss is likely
-   worth the reduction in multiplies and adds.*/
-/*Optimal 1d subset3 Cg*/
-# define OD_FILTER_PARAMS8_0 (93)
-# define OD_FILTER_PARAMS8_1 (72)
-# define OD_FILTER_PARAMS8_2 (73)
-# define OD_FILTER_PARAMS8_3 (78)
-# define OD_FILTER_PARAMS8_4 (-28)
-# define OD_FILTER_PARAMS8_5 (-23)
-# define OD_FILTER_PARAMS8_6 (-10)
-# define OD_FILTER_PARAMS8_7 (50)
-# define OD_FILTER_PARAMS8_8 (37)
-# define OD_FILTER_PARAMS8_9 (23)
+  6-bit s0=1.328125, s1=1.171875, p0=-0.234375, u0=0.515625
+  Ar95_Cg = 8.55232 dB, SBA = 23.3660, Width = 4.6896
+  BiOrth = 0.004968, Subset1_Cg = 9.62133 */
+#define OD_FILTER_PARAMS4_0 (85)
+#define OD_FILTER_PARAMS4_1 (75)
+#define OD_FILTER_PARAMS4_2 (-15)
+#define OD_FILTER_PARAMS4_3 (33)
 
 EMSCRIPTEN_KEEPALIVE
 __attribute__((noinline))
-void od_pre_filter8(od_coeff _y[8], const od_coeff _x[8]) {
-  int t[8];
+void od_pre_filter4(od_coeff _y[4], const od_coeff _x[4]) {
+  int t[4];
   /*+1/-1 butterflies (required for FIR, PR, LP).*/
-  t[7] = _x[0]-_x[7];
-  t[6] = _x[1]-_x[6];
-  t[5] = _x[2]-_x[5];
-  t[4] = _x[3]-_x[4];
-  t[3] = _x[3]-(t[4]>>1);
-  t[2] = _x[2]-(t[5]>>1);
-  t[1] = _x[1]-(t[6]>>1);
-  t[0] = _x[0]-(t[7]>>1);
+  t[3] = _x[0]-_x[3];
+  t[2] = _x[1]-_x[2];
+  t[1] = _x[1]-(t[2]>>1);
+  t[0] = _x[0]-(t[3]>>1);
   /*U filter (arbitrary invertible, omitted).*/
-  /*V filter (arbitrary invertible, can be optimized for speed or accuracy).*/
+  /*V filter (arbitrary invertible).*/
   /*Scaling factors: the biorthogonal part.*/
-  /*Note: t[i]+=t[i]>>(OD_COEFF_BITS-1)&1; is equivalent to: if(t[i]>0)t[i]++;
-    This step ensures that the scaling is trivially invertible on the
-     decoder's side, with perfect reconstruction.*/
-  t[4] = (t[4]*OD_FILTER_PARAMS8_0)>>6;
-  t[4] += -t[4]>>(OD_COEFF_BITS-1)&1;
-  t[5] = (t[5]*OD_FILTER_PARAMS8_1)>>6;
-  t[5] += -t[5]>>(OD_COEFF_BITS-1)&1;
-  t[6] = (t[6]*OD_FILTER_PARAMS8_2)>>6;
-  t[6] += -t[6]>>(OD_COEFF_BITS-1)&1;
-  t[7] = (t[7]*OD_FILTER_PARAMS8_3)>>6;
-  t[7] += -t[7]>>(OD_COEFF_BITS-1)&1;
-  /*Rotations:*/
-  t[7] += (t[6]*OD_FILTER_PARAMS8_6+32)>>6;
-  t[6] += (t[7]*OD_FILTER_PARAMS8_9+32)>>6;
-  t[6] += (t[5]*OD_FILTER_PARAMS8_5+32)>>6;
-  t[5] += (t[6]*OD_FILTER_PARAMS8_8+32)>>6;
-  t[5] += (t[4]*OD_FILTER_PARAMS8_4+32)>>6;
-  t[4] += (t[5]*OD_FILTER_PARAMS8_7+32)>>6;
+  /*Note: t[i]+=t[i]>>(OD_COEFF_BITS-1)&1 is equivalent to: if(t[i]>0)t[i]++
+    This step ensures that the scaling is trivially invertible on the decoder's
+     side, with perfect reconstruction.*/
+  /*s0*/
+  t[2] = t[2]*OD_FILTER_PARAMS4_0>>6;
+  t[2] += -t[2]>>(OD_COEFF_BITS-1)&1;
+  /*s1*/
+  t[3] = t[3]*OD_FILTER_PARAMS4_1>>6;
+  t[3] += -t[3]>>(OD_COEFF_BITS-1)&1;
+  /*Rotation:*/
+  /*p0*/
+  t[3] += (t[2]*OD_FILTER_PARAMS4_2+32)>>6;
+  /*u0*/
+  t[2] += (t[3]*OD_FILTER_PARAMS4_3+32)>>6;
   /*More +1/-1 butterflies (required for FIR, PR, LP).*/
-  t[0] += t[7]>>1;
+  t[0] += t[3]>>1;
   _y[0] = (od_coeff)t[0];
-  t[1] += t[6]>>1;
+  t[1] += t[2]>>1;
   _y[1] = (od_coeff)t[1];
-  t[2] += t[5]>>1;
-  _y[2] = (od_coeff)t[2];
-  t[3] += t[4]>>1;
-  _y[3] = (od_coeff)t[3];
-  _y[4] = (od_coeff)(t[3]-t[4]);
-  _y[5] = (od_coeff)(t[2]-t[5]);
-  _y[6] = (od_coeff)(t[1]-t[6]);
-  _y[7] = (od_coeff)(t[0]-t[7]);
+  _y[2] = (od_coeff)(t[1]-t[2]);
+  _y[3] = (od_coeff)(t[0]-t[3]);
 }
 
 EMSCRIPTEN_KEEPALIVE
 __attribute__((noinline))
-void od_post_filter8(od_coeff _x[8], const od_coeff _y[8]) {
-  int t[8];
-  t[7] = _y[0]-_y[7];
-  t[6] = _y[1]-_y[6];
-  t[5] = _y[2]-_y[5];
-  t[4] = _y[3]-_y[4];
-  t[3] = _y[3]-(t[4]>>1);
-  t[2] = _y[2]-(t[5]>>1);
-  t[1] = _y[1]-(t[6]>>1);
-  t[0] = _y[0]-(t[7]>>1);
-  t[4] -= (t[5]*OD_FILTER_PARAMS8_7+32)>>6;
-  t[5] -= (t[4]*OD_FILTER_PARAMS8_4+32)>>6;
-  t[5] -= (t[6]*OD_FILTER_PARAMS8_8+32)>>6;
-  t[6] -= (t[5]*OD_FILTER_PARAMS8_5+32)>>6;
-  t[6] -= (t[7]*OD_FILTER_PARAMS8_9+32)>>6;
-  t[7] -= (t[6]*OD_FILTER_PARAMS8_6+32)>>6;
-  t[7] = (t[7]<<6)/OD_FILTER_PARAMS8_3;
-  t[6] = (t[6]<<6)/OD_FILTER_PARAMS8_2;
-  t[5] = (t[5]<<6)/OD_FILTER_PARAMS8_1;
-  t[4] = (t[4]<<6)/OD_FILTER_PARAMS8_0;
-  t[0] += t[7]>>1;
+void od_post_filter4(od_coeff _x[4], const od_coeff _y[4]) {
+  int t[4];
+  t[3] = _y[0]-_y[3];
+  t[2] = _y[1]-_y[2];
+  t[1] = _y[1]-(t[2]>>1);
+  t[0] = _y[0]-(t[3]>>1);
+  t[2] -= (t[3]*OD_FILTER_PARAMS4_3+32)>>6;
+  t[3] -= (t[2]*OD_FILTER_PARAMS4_2+32)>>6;
+  t[3] = t[3]*(1 << 6)/OD_FILTER_PARAMS4_1;
+  t[2] = t[2]*(1 << 6)/OD_FILTER_PARAMS4_0;
+  t[0] += t[3]>>1;
   _x[0] = (od_coeff)t[0];
-  t[1] += t[6]>>1;
+  t[1] += t[2]>>1;
   _x[1] = (od_coeff)t[1];
-  t[2] += t[5]>>1;
-  _x[2] = (od_coeff)t[2];
-  t[3] += t[4]>>1;
-  _x[3] = (od_coeff)t[3];
-  _x[4] = (od_coeff)(t[3]-t[4]);
-  _x[5] = (od_coeff)(t[2]-t[5]);
-  _x[6] = (od_coeff)(t[1]-t[6]);
-  _x[7] = (od_coeff)(t[0]-t[7]);
+  _x[2] = (od_coeff)(t[1]-t[2]);
+  _x[3] = (od_coeff)(t[0]-t[3]);
 }
 
 EMSCRIPTEN_KEEPALIVE
-void lapvert(od_coeff *bufptr, od_coeff pixels) {
-  od_coeff i = 0;
-  while (i < pixels * 3) {
-    od_pre_filter8(bufptr + i, bufptr + i);
-    i = i + 8;
+void lapvert(od_coeff *_x, int w, int h) {
+  int i, j;
+  for (i = 0; i < h * 3; i++) {
+    for (j = 6; j + 4 < w; j += 8) {
+      od_pre_filter4(_x + j, _x + j);
+    }
+    _x += w;
   }
 }
 
 EMSCRIPTEN_KEEPALIVE
-void unlapvert(od_coeff *bufptr, od_coeff pixels) {
-  od_coeff i = 0;
-  while (i < pixels * 3) {
-    od_post_filter8(bufptr + i, bufptr + i);
-    i = i + 8;
+void unlapvert(od_coeff *_x, int w, int h) {
+  int i, j;
+  for (i = 0; i < h * 3; i++) {
+    for (j = 6; j + 4 < w; j += 8) {
+      od_post_filter4(_x + j, _x + j);
+    }
+    _x += w;
   }
 }
 
 EMSCRIPTEN_KEEPALIVE
-void laphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
+void laphorz(od_coeff *_x, int w, int h, od_coeff *t) {
   int i = 4;
   int j = 0;
   int p = 0;
-  while (i + 8 < h * 3) {
-    j = 0;
-    while (j < w) {
+  for (i = 6; i + 4 < h * 3; i += 8) {
+    for (j = 0; j < w; j++) {
       p = (i - 1) * w + j;
-      t[0] = bufptr[p += w];
-      t[1] = bufptr[p += w];
-      t[2] = bufptr[p += w];
-      t[3] = bufptr[p += w];
-      t[4] = bufptr[p += w];
-      t[5] = bufptr[p += w];
-      t[6] = bufptr[p += w];
-      t[7] = bufptr[p += w];
-      od_pre_filter8(t, t);
-      p -= 8 * w;
-      bufptr[p += w] = t[0];
-      bufptr[p += w] = t[1];
-      bufptr[p += w] = t[2];
-      bufptr[p += w] = t[3];
-      bufptr[p += w] = t[4];
-      bufptr[p += w] = t[5];
-      bufptr[p += w] = t[6];
-      bufptr[p += w] = t[7];
-      j = j + 1;
+      t[0] = _x[p += w];
+      t[1] = _x[p += w];
+      t[2] = _x[p += w];
+      t[3] = _x[p += w];
+      od_pre_filter4(t, t);
+      p -= 4 * w;
+      _x[p += w] = t[0];
+      _x[p += w] = t[1];
+      _x[p += w] = t[2];
+      _x[p += w] = t[3];
     }
-    i = i + 8;
   }
 }
 
 EMSCRIPTEN_KEEPALIVE
-void unlaphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
+void unlaphorz(od_coeff *_x, int w, int h, od_coeff *t) {
   int i = 4;
   int j = 0;
   int p = 0;
-  while (i + 8 < h * 3) {
-    j = 0;
-    while (j < w) {
+  for (i = 6; i + 4 < h * 3; i += 8) {
+    for (j = 0; j < w; j++) {
       p = (i - 1) * w + j;
-      t[0] = bufptr[p += w];
-      t[1] = bufptr[p += w];
-      t[2] = bufptr[p += w];
-      t[3] = bufptr[p += w];
-      t[4] = bufptr[p += w];
-      t[5] = bufptr[p += w];
-      t[6] = bufptr[p += w];
-      t[7] = bufptr[p += w];
-      od_post_filter8(t, t);
-      p -= 8 * w;
-      bufptr[p += w] = t[0];
-      bufptr[p += w] = t[1];
-      bufptr[p += w] = t[2];
-      bufptr[p += w] = t[3];
-      bufptr[p += w] = t[4];
-      bufptr[p += w] = t[5];
-      bufptr[p += w] = t[6];
-      bufptr[p += w] = t[7];
-      j = j + 1;
+      t[0] = _x[p += w];
+      t[1] = _x[p += w];
+      t[2] = _x[p += w];
+      t[3] = _x[p += w];
+      od_post_filter4(t, t);
+      p -= 4 * w;
+      _x[p += w] = t[0];
+      _x[p += w] = t[1];
+      _x[p += w] = t[2];
+      _x[p += w] = t[3];
     }
-    i = i + 8;
   }
 }
