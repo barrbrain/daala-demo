@@ -126,6 +126,7 @@ typedef int od_coeff;
 # define OD_FILTER_PARAMS8_9 (23)
 
 EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 void od_pre_filter8(od_coeff _y[8], const od_coeff _x[8]) {
   int t[8];
   /*+1/-1 butterflies (required for FIR, PR, LP).*/
@@ -174,6 +175,7 @@ void od_pre_filter8(od_coeff _y[8], const od_coeff _x[8]) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 void od_post_filter8(od_coeff _x[8], const od_coeff _y[8]) {
   int t[8];
   t[7] = _y[0]-_y[7];
@@ -212,18 +214,20 @@ EMSCRIPTEN_KEEPALIVE
 void lapvert(od_coeff *bufptr, od_coeff pixels) {
   od_coeff i = 0;
   while (i < pixels * 3) {
-    od_pre_filter8(bufptr + i * 8, bufptr + i * 8);
-    i = i+1;
+    od_pre_filter8(bufptr + i, bufptr + i);
+    i = i + 8;
   }
 }
+
 EMSCRIPTEN_KEEPALIVE
 void unlapvert(od_coeff *bufptr, od_coeff pixels) {
   od_coeff i = 0;
   while (i < pixels * 3) {
-    od_post_filter8(bufptr + i * 8, bufptr + i * 8);
-    i = i+1;
+    od_post_filter8(bufptr + i, bufptr + i);
+    i = i + 8;
   }
 }
+
 EMSCRIPTEN_KEEPALIVE
 void laphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
   int i = 4;
@@ -253,9 +257,10 @@ void laphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
       bufptr[p += w] = t[7];
       j = j + 1;
     }
-    i = i+8;
+    i = i + 8;
   }
 }
+
 EMSCRIPTEN_KEEPALIVE
 void unlaphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
   int i = 4;
@@ -285,6 +290,6 @@ void unlaphorz(od_coeff *bufptr, od_coeff w, od_coeff h, od_coeff *t) {
       bufptr[p += w] = t[7];
       j = j + 1;
     }
-    i = i+8;
+    i = i + 8;
   }
 }
