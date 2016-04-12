@@ -38,22 +38,35 @@ function ycbco2rgb(inbuf, outbuf, pixels) {
     i = i+1;
   }
 }
+var quant_table = [
+[16, 11, 10, 16, 124, 140, 151, 161],
+[12, 12, 14, 19, 126, 158, 160, 155],
+[14, 13, 16, 24, 140, 157, 169, 156],
+[14, 17, 22, 29, 151, 187, 180, 162],
+[18, 22, 37, 56, 168, 109, 103, 177],
+[24, 35, 55, 64, 181, 104, 113, 192],
+[49, 64, 78, 87, 103, 121, 120, 101],
+[72, 92, 95, 98, 112, 100, 103, 199]];
 function quantize(w, h) {
   w = w | 0;
   h = h | 0;
-  var i = 0, j = 0, p = imageptr, v = 0;
+  var i = 0, j = 0, p = imageptr, v = 0, k = 0, l = 0, q = 0;
   for (i = 0; i < h; i += 8) {
     for (j = 0; j < w; j += 8) {
-      dct.od_bin_idct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr) 
-    }
-    for (j = 0; j < w * 8; j++) {
-      v = I4[p + j];
-      v = v >> 6;
-      v = v << 6;
-      I4[p + j] = v;
+      dct.od_bin_idct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
     }
     for (j = 0; j < w; j += 8) {
-      dct.od_bin_fdct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr) 
+      for (k = 0; k < 8; k++) {
+	for (l = 0; l < 8; l++) {
+          var q = quant_table[k][l];
+          v = I4[p + j + k*w+l];
+          v = Math.round(v / q) * q;
+          I4[p + j + k*w+l] = v;
+        }
+      }
+    }
+    for (j = 0; j < w; j += 8) {
+      dct.od_bin_fdct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
     }
     p += 8 * w;
   }
@@ -65,7 +78,7 @@ function dering_image(w, h) {
   dering.init_tables(dering_tables);
   for (j = 8; j + 8 < h; j = j+8|0) {
     for (i = 8; i + 8 < w; i = i+8|0) {
-      od_dering(imageptr +j*w+i|0, w, imageptr +j*w+i|0, w, 0, 64, dering_tables);
+      od_dering(imageptr +j*w+i|0, w, imageptr +j*w+i|0, w, 0, 187, dering_tables);
     }
    }
 }
