@@ -3,91 +3,103 @@ var filter = (function(global, foreign, buffer) {
 var HEAP32 = new global.Int32Array(buffer);
 var Math_imul = global.Math.imul;
 
-function _unlaphorz(i9, i11, i1, i10) {
- i9 = i9 | 0;
+function _unlaphorz(i11, i15, i12, i14) {
  i11 = i11 | 0;
- i1 = i1 | 0;
- i10 = i10 | 0;
- var i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, i7 = 0, i8 = 0, i12 = 0;
- i8 = i1 * 3 | 0;
- if ((i8 | 0) <= 10) return;
- i2 = i10 + 4 | 0;
- i3 = i10 + 8 | 0;
- i4 = i10 + 12 | 0;
- i5 = i11 << 2;
- if ((i11 | 0) > 0) i6 = 6; else {
-  i1 = 6;
-  while (1) if ((i1 + 12 | 0) < (i8 | 0)) i1 = i1 + 8 | 0; else break;
-  return;
- }
- while (1) {
-  i1 = Math_imul(i6, i11) | 0;
-  i7 = 0;
-  do {
-   i12 = i1 + i7 | 0;
-   HEAP32[i10 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i2 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i3 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i4 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   _od_post_filter4(i10, i10);
-   i12 = i12 - i5 + i11 | 0;
-   HEAP32[i9 + (i12 << 2) >> 2] = HEAP32[i10 >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i9 + (i12 << 2) >> 2] = HEAP32[i2 >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i9 + (i12 << 2) >> 2] = HEAP32[i3 >> 2];
-   HEAP32[i9 + (i12 + i11 << 2) >> 2] = HEAP32[i4 >> 2];
-   i7 = i7 + 1 | 0;
-  } while ((i7 | 0) != (i11 | 0));
-  if ((i6 + 12 | 0) < (i8 | 0)) i6 = i6 + 8 | 0; else break;
- }
+ i15 = i15 | 0;
+ i12 = i12 | 0;
+ i14 = i14 | 0;
+ var i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, i7 = 0, i8 = 0, i9 = 0, i10 = 0, i13 = 0, i16 = 0;
+ i5 = (i12 | 0) > 10;
+ i6 = (i15 | 0) > 0;
+ i7 = i14 + 4 | 0;
+ i8 = i14 + 8 | 0;
+ i9 = i14 + 12 | 0;
+ i10 = i15 << 2;
+ i13 = 0;
+ do {
+  L3 : do if (i5) {
+   i2 = (Math_imul(i13, i12) | 0) + -1 | 0;
+   if (i6) i3 = 6; else {
+    i1 = 6;
+    while (1) if ((i1 + 12 | 0) < (i12 | 0)) i1 = i1 + 8 | 0; else break L3;
+   }
+   while (1) {
+    i1 = (Math_imul(i2 + i3 | 0, i15) | 0) + i15 | 0;
+    i4 = 0;
+    do {
+     i16 = i1 + i4 | 0;
+     HEAP32[i14 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i7 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i8 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i9 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     _od_post_filter4(i14, i14);
+     i16 = i16 - i10 + i15 | 0;
+     HEAP32[i11 + (i16 << 2) >> 2] = HEAP32[i14 >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i11 + (i16 << 2) >> 2] = HEAP32[i7 >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i11 + (i16 << 2) >> 2] = HEAP32[i8 >> 2];
+     HEAP32[i11 + (i16 + i15 << 2) >> 2] = HEAP32[i9 >> 2];
+     i4 = i4 + 1 | 0;
+    } while ((i4 | 0) != (i15 | 0));
+    if ((i3 + 12 | 0) < (i12 | 0)) i3 = i3 + 8 | 0; else break;
+   }
+  } while (0);
+  i13 = i13 + 1 | 0;
+ } while ((i13 | 0) != 3);
  return;
 }
 
-function _laphorz(i9, i11, i1, i10) {
- i9 = i9 | 0;
+function _laphorz(i11, i15, i12, i14) {
  i11 = i11 | 0;
- i1 = i1 | 0;
- i10 = i10 | 0;
- var i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, i7 = 0, i8 = 0, i12 = 0;
- i8 = i1 * 3 | 0;
- if ((i8 | 0) <= 10) return;
- i2 = i10 + 4 | 0;
- i3 = i10 + 8 | 0;
- i4 = i10 + 12 | 0;
- i5 = i11 << 2;
- if ((i11 | 0) > 0) i6 = 6; else {
-  i1 = 6;
-  while (1) if ((i1 + 12 | 0) < (i8 | 0)) i1 = i1 + 8 | 0; else break;
-  return;
- }
- while (1) {
-  i1 = Math_imul(i6, i11) | 0;
-  i7 = 0;
-  do {
-   i12 = i1 + i7 | 0;
-   HEAP32[i10 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i2 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i3 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i4 >> 2] = HEAP32[i9 + (i12 << 2) >> 2];
-   _od_pre_filter4(i10, i10);
-   i12 = i12 - i5 + i11 | 0;
-   HEAP32[i9 + (i12 << 2) >> 2] = HEAP32[i10 >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i9 + (i12 << 2) >> 2] = HEAP32[i2 >> 2];
-   i12 = i12 + i11 | 0;
-   HEAP32[i9 + (i12 << 2) >> 2] = HEAP32[i3 >> 2];
-   HEAP32[i9 + (i12 + i11 << 2) >> 2] = HEAP32[i4 >> 2];
-   i7 = i7 + 1 | 0;
-  } while ((i7 | 0) != (i11 | 0));
-  if ((i6 + 12 | 0) < (i8 | 0)) i6 = i6 + 8 | 0; else break;
- }
+ i15 = i15 | 0;
+ i12 = i12 | 0;
+ i14 = i14 | 0;
+ var i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, i7 = 0, i8 = 0, i9 = 0, i10 = 0, i13 = 0, i16 = 0;
+ i5 = (i12 | 0) > 10;
+ i6 = (i15 | 0) > 0;
+ i7 = i14 + 4 | 0;
+ i8 = i14 + 8 | 0;
+ i9 = i14 + 12 | 0;
+ i10 = i15 << 2;
+ i13 = 0;
+ do {
+  L3 : do if (i5) {
+   i2 = (Math_imul(i13, i12) | 0) + -1 | 0;
+   if (i6) i3 = 6; else {
+    i1 = 6;
+    while (1) if ((i1 + 12 | 0) < (i12 | 0)) i1 = i1 + 8 | 0; else break L3;
+   }
+   while (1) {
+    i1 = (Math_imul(i2 + i3 | 0, i15) | 0) + i15 | 0;
+    i4 = 0;
+    do {
+     i16 = i1 + i4 | 0;
+     HEAP32[i14 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i7 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i8 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i9 >> 2] = HEAP32[i11 + (i16 << 2) >> 2];
+     _od_pre_filter4(i14, i14);
+     i16 = i16 - i10 + i15 | 0;
+     HEAP32[i11 + (i16 << 2) >> 2] = HEAP32[i14 >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i11 + (i16 << 2) >> 2] = HEAP32[i7 >> 2];
+     i16 = i16 + i15 | 0;
+     HEAP32[i11 + (i16 << 2) >> 2] = HEAP32[i8 >> 2];
+     HEAP32[i11 + (i16 + i15 << 2) >> 2] = HEAP32[i9 >> 2];
+     i4 = i4 + 1 | 0;
+    } while ((i4 | 0) != (i15 | 0));
+    if ((i3 + 12 | 0) < (i12 | 0)) i3 = i3 + 8 | 0; else break;
+   }
+  } while (0);
+  i13 = i13 + 1 | 0;
+ } while ((i13 | 0) != 3);
  return;
 }
 

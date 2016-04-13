@@ -103,7 +103,7 @@ function init_image() {
   var ctx = canvas.getContext('2d');
   ctx.drawImage(srcimage, 0, 0, w, h, 0, 0, w, h);
   window.imagedata = ctx.getImageData(0, 0, w, h);
-  window.imagebuffer = window.I4.subarray(imageptr, w * h * 3);
+  window.imagebuffer = window.I4.subarray(imageptr>>2, (imageptr>>2) + w * h * 3);
   update_image();
 }
 function update_image() {
