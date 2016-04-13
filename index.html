@@ -120,7 +120,7 @@ function dering_image(w, h, threshold) {
 }
 var config = {
   scale: 409,
-  strength: 2.0,
+  strength: 1.0,
   lapping: true
 };
 var imagedata;
@@ -175,13 +175,13 @@ function loadUserImage(event) {
 <img style="display:none;" id="srcimage" src="barrbrain.jpg" onload="init_image();"/>
 <div>
   <label for="lapping">Quantization level</label>
-  <input id="scale" type="range" min="8" max="5000" step="1" value="409" oninput="config.scale=this.value|0;update_image();"/>
+  <input id="scale" type="range" min="8" max="8192" step="1" value="409" oninput="config.scale=this.value|0;update_image();"/>
 </div><div>
   <label for="lapping">4-point lapping filter (deblocking)</label>
   <input id="lapping" checked type="checkbox" onchange="config.lapping=!!(this.checked);update_image();"/>
 </div><div>
   <label for="lapping">Deringing filter strength</label>
-  <input id="strength" type="range" min="0.0" max="2" step="0.1" value="2.0" oninput="config.strength=this.value;update_image();"/>
+  <input id="strength" type="range" min="0.0" max="2" step="0.1" value="1.0" oninput="config.strength=this.value;update_image();"/>
 </div><div>
   <label for="userImage">Load your own image (not uploaded)</label>
   <input id="userImage" type="file" onchange="loadUserImage(event);" />
