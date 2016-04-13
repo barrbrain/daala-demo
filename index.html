@@ -131,6 +131,14 @@ function update_image() {
   ycgco2rgb(imagebuffer, imageout.data, w*h);
   ctx.putImageData(imageout, 0, 0);
 }
+function loadUserImage(event) {
+  var file = event.target.files[0];
+  var reader  = new FileReader();
+  reader.addEventListener("load", function () {
+    document.getElementById('srcimage').src = reader.result;
+  }, false);
+  if (file) reader.readAsDataURL(file);
+}
 </script>
 <img style="display:none;" id="srcimage" src="barrbrain.jpg" onload="init_image();"/>
 <div>
@@ -142,6 +150,9 @@ function update_image() {
 </div><div>
   <label for="lapping">Deringing filter strength</label>
   <input id="strength" type="range" min="0.0" max="4" step="0.1" oninput="config.strength=this.value;update_image();"/>
+</div><div>
+  <label for="userImage">Load your own image (not uploaded)</label>
+  <input id="userImage" type="file" onchange="loadUserImage(event);" />
 </div>
 <canvas id='canvas' width=1 height=1></canvas>
 </body>
