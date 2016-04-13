@@ -11,7 +11,7 @@ var imageptr = (8*8)<<2;
 <script src="dering.js"></script>
 <body>
 <script>
-function rgb2ycbco(inbuf, outbuf, pixels) {
+function rgb2ycgco(inbuf, outbuf, pixels) {
   var y, cg, co;
   var i = 0;
   while (i < pixels) {
@@ -24,7 +24,7 @@ function rgb2ycbco(inbuf, outbuf, pixels) {
     i = i+1;
   }
 }
-function ycbco2rgb(inbuf, outbuf, pixels) {
+function ycgco2rgb(inbuf, outbuf, pixels) {
   var r, g, b, t;
   var i = 0;
   while (i < pixels) {
@@ -47,9 +47,10 @@ var quant_table = [
 [24, 35, 55, 64, 181, 104, 113, 192],
 [49, 64, 78, 87, 103, 121, 120, 101],
 [72, 92, 95, 98, 112, 100, 103, 199]];
-function quantize(w, h) {
+function quantize(w, h, scale) {
   w = w | 0;
   h = h | 0;
+  scale = scale | 0;
   var i = 0, j = 0, p = imageptr, v = 0, k = 0, l = 0, q = 0;
   for (i = 0; i+7 < h; i += 8) {
     for (j = 0; j+7 < w; j += 8) {
@@ -58,7 +59,7 @@ function quantize(w, h) {
     for (j = 0; j+7 < w; j += 8) {
       for (k = 0; k < 8; k++) {
 	for (l = 0; l < 8; l++) {
-          var q = quant_table[k][l] * 2;
+          var q = (quant_table[k][l] * scale) >> 4;
           v = I4[p + j + k*w+l];
           v = Math.round(v / q) * q;
           I4[p + j + k*w+l] = v;
@@ -71,18 +72,28 @@ function quantize(w, h) {
     p += 8 * w;
   }
 }
-function dering_image(w, h) {
+function dering_image(w, h, threshold) {
+  w = w | 0;
+  h = h | 0;
+  threshold = threshold | 0;
   var i = 0, j = 0;
   var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
   var od_dering = dering.od_dering;
   dering.init_tables(dering_tables);
-  for (j = 8; j + 8 < h; j = j+8|0) {
-    for (i = 8; i + 8 < w; i = i+8|0) {
-      od_dering(imageptr +((j*w+i)<<2), w, imageptr +((j*w+i)<<2), w, 0, 261, dering_tables);
+  for (j = 8; j + 10 < h; j = j+8|0) {
+    for (i = 8; i + 10 < w; i = i+8|0) {
+      od_dering(imageptr +((j*w+i)<<2), w, imageptr +((j*w+i)<<2), w, 0, threshold, dering_tables);
     }
    }
 }
-function foo() {
+var config = {
+  scale: 31,
+  strength: 2.0,
+  lapping: true
+};
+var imagedata;
+var imagebuffer;
+function init_image() {
   var canvas = document.getElementById('canvas');
   var srcimage = document.getElementById('srcimage');
   var w = srcimage.width;
@@ -91,53 +102,46 @@ function foo() {
   canvas.height = h;
   var ctx = canvas.getContext('2d');
   ctx.drawImage(srcimage, 0, 0, w, h, 0, 0, w, h);
-  var image = ctx.getImageData(0, 0, w, h);
-  var imagebuffer = window.I4.subarray(imageptr, w * h * 3);
-  rgb2ycbco(image.data, imagebuffer, w*h);
+  window.imagedata = ctx.getImageData(0, 0, w, h);
+  window.imagebuffer = window.I4.subarray(imageptr, w * h * 3);
+  update_image();
+}
+function update_image() {
+  if (!imagedata) return;
+  var w = imagedata.width;
+  var h = imagedata.height;
+  rgb2ycgco(imagedata.data, imagebuffer, w*h);
   var ts = new Date();
-  filter.lapvert(imageptr, w, h);
-  filter.laphorz(imageptr, w, h, tempptr);
+  if (config.lapping) {
+    filter.lapvert(imageptr, w, h);
+    filter.laphorz(imageptr, w, h, tempptr);
+  }
+  quantize(w, h, config.scale);
+  if (config.lapping) {
+    filter.unlaphorz(imageptr, w, h, tempptr);
+    filter.unlapvert(imageptr, w, h);
+  }
+  if (config.strength > 0) {
+    dering_image(w, h, (config.scale*187>>4)*config.strength);
+  }
   console.log(new Date() - ts);
-  ycbco2rgb(imagebuffer, image.data, w*h);
-  ctx.putImageData(image, 0, 0);
-  canvas = document.getElementById('canvas2');
-  canvas.width = w;
-  canvas.height = h;
-  ctx = canvas.getContext('2d');
-  ts = new Date();
-  quantize(w, h);
-  console.log(new Date() - ts);
-  ycbco2rgb(imagebuffer, image.data, w*h);
-  ctx.putImageData(image, 0, 0);
-  ts = new Date();
-  filter.unlaphorz(imageptr, w, h, tempptr);
-  filter.unlapvert(imageptr, w, h);
-  console.log(new Date() - ts);
-  ycbco2rgb(imagebuffer, image.data, w*h);
-  canvas = document.getElementById('canvas3');
-  canvas.width = w;
-  canvas.height = h;
-  ctx = canvas.getContext('2d');
-  ctx.putImageData(image, 0, 0);
-  ts = new Date();
-  dering_image(w, h);
-  console.log(new Date() - ts);
-  ycbco2rgb(imagebuffer, image.data, w*h);
-  canvas = document.getElementById('canvas4');
-  canvas.width = w;
-  canvas.height = h;
-  ctx = canvas.getContext('2d');
-  ctx.putImageData(image, 0, 0);
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var imageout = ctx.getImageData(0, 0, w, h)
+  ycgco2rgb(imagebuffer, imageout.data, w*h);
+  ctx.putImageData(imageout, 0, 0);
 }
 </script>
-<h1>Original image</h1>
-<img id="srcimage" src="barrbrain.jpg" onload="foo();"/>
-<h1>4-point lapping (inverse deblocking filter)</h1>
+<img style="display:none;" id="srcimage" src="barrbrain.jpg" onload="init_image();"/>
+<div>
+  <label for="lapping">Quantization level</label>
+  <input id="scale" type="range" min="8" max="128" step="1" oninput="config.scale=this.value|0;update_image();"/>
+</div><div>
+  <label for="lapping">4-point lapping filter (deblocking)</label>
+  <input id="lapping" checked type="checkbox" onchange="config.lapping=!!(this.checked);update_image();"/>
+</div><div>
+  <label for="lapping">Deringing filter strength</label>
+  <input id="strength" type="range" min="0.0" max="4" step="0.1" oninput="config.strength=this.value;update_image();"/>
+</div>
 <canvas id='canvas' width=1 height=1></canvas>
-<h1>JPEG-like compression (8x8 DCT)</h1>
-<canvas id='canvas2' width=1 height=1></canvas>
-<h1>4-point lapping (deblocking filter)</h1>
-<canvas id='canvas3' width=1 height=1></canvas>
-<h1>8x8 deringing filter</h1>
-<canvas id='canvas4' width=1 height=1></canvas>
 </body>
