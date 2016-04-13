@@ -83,13 +83,13 @@ function quantize(w, h, scale) {
   var i = 0, j = 0, p = imageptr>>2, v = 0, k = 0, l = 0, q = 0;
   for (i = 0; i+7 < h * 3; i += 8) {
     for (j = 0; j+7 < w; j += 8) {
-      dct.od_bin_idct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
+      dct.od_bin_fdct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
     }
     for (j = 0; j+7 < w; j += 8) {
       pvq8x8(p + j, w, scale);
     }
     for (j = 0; j+7 < w; j += 8) {
-      dct.od_bin_fdct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
+      dct.od_bin_idct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
     }
     p += 8 * w;
   }
