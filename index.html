@@ -51,14 +51,14 @@ function quantize(w, h) {
   w = w | 0;
   h = h | 0;
   var i = 0, j = 0, p = imageptr, v = 0, k = 0, l = 0, q = 0;
-  for (i = 0; i < h; i += 8) {
+  for (i = 0; i < h * 3; i += 8) {
     for (j = 0; j < w; j += 8) {
       dct.od_bin_fdct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
     }
     for (j = 0; j < w; j += 8) {
       for (k = 0; k < 8; k++) {
 	for (l = 0; l < 8; l++) {
-          var q = quant_table[k][l];
+          var q = quant_table[k][l] * 8191 >> 8;
           v = I4[p + j + k*w+l];
           v = Math.round(v / q) * q;
           I4[p + j + k*w+l] = v;
@@ -72,13 +72,16 @@ function quantize(w, h) {
   }
 }
 function dering_image(w, h) {
-  var i = 0, j = 0;
+  var i = 0, j = 0, p = 0;
   var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
   var od_dering = dering.od_dering;
   dering.init_tables(dering_tables);
   for (j = 8; j + 8 < h; j = j+8|0) {
     for (i = 8; i + 8 < w; i = i+8|0) {
-      od_dering(imageptr +j*w+i|0, w, imageptr +j*w+i|0, w, 0, 187, dering_tables);
+      p = imageptr +((j*w+i)<<2)|0
+      od_dering(p, w, p, w, 0, 8191>>4, dering_tables);
+      od_dering(p+(w*h<<2), w, p+(w*h<<2), w, 1, 8191>>4, dering_tables);
+      od_dering(p+(w*h<<3), w, p+(w*h<<3), w, 3, 8191>>4, dering_tables);
     }
    }
 }
