@@ -92,7 +92,7 @@ function foo() {
   var ctx = canvas.getContext('2d');
   ctx.drawImage(srcimage, 0, 0, w, h, 0, 0, w, h);
   var image = ctx.getImageData(0, 0, w, h);
-  var imagebuffer = window.I4.subarray(imageptr, w * h * 3);
+  var imagebuffer = window.I4.subarray(imageptr>>2, (imageptr>>2) + w * h * 3);
   rgb2ycbco(image.data, imagebuffer, w*h);
   var ts = new Date();
   filter.lapvert(imageptr, w, h);

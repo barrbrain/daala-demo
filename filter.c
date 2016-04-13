@@ -193,44 +193,44 @@ void unlapvert(od_coeff *_x, int w, int h) {
 
 EMSCRIPTEN_KEEPALIVE
 void laphorz(od_coeff *_x, int w, int h, od_coeff *t) {
-  int i = 4;
-  int j = 0;
-  int p = 0;
-  for (i = 6; i + 4 < h * 3; i += 8) {
-    for (j = 0; j < w; j++) {
-      p = (i - 1) * w + j;
-      t[0] = _x[p += w];
-      t[1] = _x[p += w];
-      t[2] = _x[p += w];
-      t[3] = _x[p += w];
-      od_pre_filter4(t, t);
-      p -= 4 * w;
-      _x[p += w] = t[0];
-      _x[p += w] = t[1];
-      _x[p += w] = t[2];
-      _x[p += w] = t[3];
+  int i, j, k, p;
+  for (k = 0; k < 3; k++) {
+    for (i = 6; i + 4 < h; i += 8) {
+      for (j = 0; j < w; j++) {
+        p = (k * h + i - 1) * w + j;
+        t[0] = _x[p += w];
+        t[1] = _x[p += w];
+        t[2] = _x[p += w];
+        t[3] = _x[p += w];
+        od_pre_filter4(t, t);
+        p -= 4 * w;
+        _x[p += w] = t[0];
+        _x[p += w] = t[1];
+        _x[p += w] = t[2];
+        _x[p += w] = t[3];
+      }
     }
   }
 }
 
 EMSCRIPTEN_KEEPALIVE
 void unlaphorz(od_coeff *_x, int w, int h, od_coeff *t) {
-  int i = 4;
-  int j = 0;
-  int p = 0;
-  for (i = 6; i + 4 < h * 3; i += 8) {
-    for (j = 0; j < w; j++) {
-      p = (i - 1) * w + j;
-      t[0] = _x[p += w];
-      t[1] = _x[p += w];
-      t[2] = _x[p += w];
-      t[3] = _x[p += w];
-      od_post_filter4(t, t);
-      p -= 4 * w;
-      _x[p += w] = t[0];
-      _x[p += w] = t[1];
-      _x[p += w] = t[2];
-      _x[p += w] = t[3];
+  int i, j, k, p;
+  for (k = 0; k < 3; k++) {
+    for (i = 6; i + 4 < h; i += 8) {
+      for (j = 0; j < w; j++) {
+        p = (k * h + i - 1) * w + j;
+        t[0] = _x[p += w];
+        t[1] = _x[p += w];
+        t[2] = _x[p += w];
+        t[3] = _x[p += w];
+        od_post_filter4(t, t);
+        p -= 4 * w;
+        _x[p += w] = t[0];
+        _x[p += w] = t[1];
+        _x[p += w] = t[2];
+        _x[p += w] = t[3];
+      }
     }
   }
 }
