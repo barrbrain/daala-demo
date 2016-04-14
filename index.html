@@ -38,6 +38,7 @@ function ycgco2rgb(inbuf, outbuf, pixels) {
     i = i+1;
   }
 }
+var dering_map = [0, 0.5, 0.707, 1, 1.41, 2];
 var cq_map = [0x0000,
 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000F,
 0x0011, 0x0013, 0x0015, 0x0018, 0x001B, 0x001E,
@@ -152,17 +153,29 @@ function loadUserImage(event) {
   }, false);
   if (file) reader.readAsDataURL(file);
 }
+function changeStrength(strength) {
+  config.strength=dering_map[strength.value];
+  document.getElementById('strengthVal').innerText = config.strength;
+  update_image();
+}
+function changeScale(scale) {
+  config.scale=cq_map[scale.value];
+  document.getElementById('scaleVal').innerText = config.scale / 16.;
+  update_image();
+}
 </script>
 <img style="display:none;" id="srcimage" src="barrbrain.jpg" onload="init_image();"/>
 <div>
   <label for="lapping">Quantization level (log scale)</label>
-  <input id="scale" type="range" min="1" max="63" step="1" value="16" oninput="config.scale=cq_map[this.value]|0;update_image();"/>
+  <input id="scale" type="range" min="1" max="63" step="1" value="16" oninput="changeScale(this)"/>
+  <span id="scaleVal">2.875</span>
 </div><div>
   <label for="lapping">4-point lapping filter (deblocking)</label>
   <input id="lapping" checked type="checkbox" onchange="config.lapping=!!(this.checked);update_image();"/>
 </div><div>
   <label for="lapping">Deringing filter strength</label>
-  <input id="strength" type="range" min="0.0" max="2" step="0.1" value="1.0" oninput="config.strength=this.value;update_image();"/>
+  <input id="strength" type="range" min="0" max="5" step="1" value="3" oninput="changeStrength(this)"/>
+  <span id="strengthVal">1</span>
 </div><div>
   <label for="userImage">Load your own image (not uploaded)</label>
   <input id="userImage" type="file" onchange="loadUserImage(event);" />
