@@ -368,5 +368,95 @@ function _od_dering(i9, i10, i7, i8, i2, i4, i6) {
  return;
 }
 
-return { od_dir_find8: _od_dir_find8, init_tables: _init_tables, od_filter_dering_direction_8x8_c: _od_filter_dering_direction_8x8_c, od_filter_dering_orthogonal_8x8_c: _od_filter_dering_orthogonal_8x8_c, od_dering: _od_dering };
+function _dering_image(i5, i11, i8, i10, i9) {
+ i5 = i5 | 0;
+ i11 = i11 | 0;
+ i8 = i8 | 0;
+ i10 = i10 | 0;
+ i9 = i9 | 0;
+ var i1 = 0, i2 = 0, i3 = 0, i4 = 0, i6 = 0, i7 = 0, i12 = 0;
+ _init_tables(i9);
+ i6 = Math_imul(i8, i11) | 0;
+ i7 = (i11 | 0) > 16;
+ if ((i8 | 0) < 17 | i7 ^ 1) return; else {
+  i4 = 16;
+  i1 = 8;
+ }
+ while (1) {
+  i3 = i5 + ((Math_imul(i1, i11) | 0) << 2) | 0;
+  i2 = 16;
+  i1 = 8;
+  while (1) {
+   i1 = i3 + (i1 << 2) | 0;
+   _od_dering(i1, i11, i1, i11, 0, i10, i9);
+   i1 = i2 + 8 | 0;
+   if ((i1 | 0) < (i11 | 0)) {
+    i12 = i2;
+    i2 = i1;
+    i1 = i12;
+   } else break;
+  }
+  i1 = i4 + 8 | 0;
+  if ((i1 | 0) < (i8 | 0)) {
+   i12 = i4;
+   i4 = i1;
+   i1 = i12;
+  } else break;
+ }
+ i5 = i5 + (i6 << 2) | 0;
+ if (i7) {
+  i4 = 16;
+  i1 = 8;
+ } else return;
+ while (1) {
+  i2 = i5 + ((Math_imul(i1, i11) | 0) << 2) | 0;
+  i3 = 16;
+  i1 = 8;
+  while (1) {
+   i1 = i2 + (i1 << 2) | 0;
+   _od_dering(i1, i11, i1, i11, 1, i10, i9);
+   i1 = i3 + 8 | 0;
+   if ((i1 | 0) < (i11 | 0)) {
+    i12 = i3;
+    i3 = i1;
+    i1 = i12;
+   } else break;
+  }
+  i1 = i4 + 8 | 0;
+  if ((i1 | 0) < (i8 | 0)) {
+   i12 = i4;
+   i4 = i1;
+   i1 = i12;
+  } else break;
+ }
+ i5 = i5 + (i6 << 2) | 0;
+ if (i7) {
+  i4 = 16;
+  i1 = 8;
+ } else return;
+ while (1) {
+  i2 = i5 + ((Math_imul(i1, i11) | 0) << 2) | 0;
+  i3 = 16;
+  i1 = 8;
+  while (1) {
+   i1 = i2 + (i1 << 2) | 0;
+   _od_dering(i1, i11, i1, i11, 2, i10, i9);
+   i1 = i3 + 8 | 0;
+   if ((i1 | 0) < (i11 | 0)) {
+    i12 = i3;
+    i3 = i1;
+    i1 = i12;
+   } else break;
+  }
+  i1 = i4 + 8 | 0;
+  if ((i1 | 0) < (i8 | 0)) {
+   i12 = i4;
+   i4 = i1;
+   i1 = i12;
+  } else break;
+ }
+ return;
+}
+
+return { od_dir_find8: _od_dir_find8, init_tables: _init_tables, od_filter_dering_direction_8x8_c: _od_filter_dering_direction_8x8_c, od_filter_dering_orthogonal_8x8_c: _od_filter_dering_orthogonal_8x8_c, od_dering: _od_dering, dering_image: _dering_image };
 })(window, null, window.HEAP);
