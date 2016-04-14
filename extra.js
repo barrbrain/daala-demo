@@ -125,7 +125,7 @@ function update_image() {
     var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
     dering.dering_image(imageptr, w, h, config.scale*config.strength>>4, dering_tables);
   }
-  console.log(new Date() - ts);
+  document.getElementById('status').innerText = 'Applied all filters in ' + (new Date() - ts) + ' ms.';
   var canvas = document.getElementById('canvas');
   var ctx = canvas.getContext('2d');
   var imageout = ctx.getImageData(0, 0, w, h)
