@@ -18,9 +18,72 @@ div > label, div > input, div > span {
 #canvas {
   max-width: 100%;
 }
+body {
+  background-color: #cde;
+  font-family: Georgia, serif ;
+  line-height: 1.3em;
+  padding: 1em;
+  margin: 1em auto 0 auto;
+  color: #012;
+}
+
+article {
+  -webkit-column-width: 65ex;
+  -moz-column-width: 65ex;
+  column-width: 65ex;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: 100%;
+  margin-bottom: 1em;
+}
+
+p {
+  margin: 1em 0;
+  text-align: justify;
+  max-width: 65ex;
+}
+
+a {
+  color: #369;
+  text-decoration: none;
+}
+
+a:visited {
+  color: #468;
+}
+
+a:hover {
+  color: #567;
+}
+
+#demo {
+  margin-top: 1em;
+}
+
+#demo > div {
+  margin-bottom: 1em;
+}
 </style>
 <body>
 <h1>Daala image methods live demo</h1>
+<h2>by <a href="http://ba.rr-dav.id.au/">barrbrain</a></h2>
+<article>
+<p>This page is intended as a playground to demonstrate the power of the modern web platform.
+The styling, content and scripts compress to less than 8kB, excluding the default test image.
+The filters are implemented mostly in <a href="http://asmjs.org/">asm.js</a> with help from
+<a href="https://kripken.github.io/emscripten-site/">emscripten</a>, tuned across a few round trips.
+<p>For simplicity, the block sizes for all filters are fixed at 8x8 and chroma is not subsampled.
+We take the <a href="https://en.wikipedia.org/wiki/RGBA_color_space">RGBA</a> data from the canvas
+and transform to <a href="https://en.wikipedia.org/wiki/YCgCo">YCgCo</a> before applying the filters.
+<p>For now, quantization is a simple approximation to <a href="https://people.xiph.org/~jm/daala/pvq_demo/">PVQ</a>
+without activity masking. It would be nice to estimate the bitrate for the current test image at this step.
+<p>The <a href="https://people.xiph.org/~jm/daala/deringing_demo/">deringing</a> code was mangled to
+be initialized on demand and use a small buffer, so it probably has bugs.
+However, it still illustrates the many uses of directed selective smoothing in reducing artifacts.
+<p>You can load an image into the page and play with the parameters to see how they interact.
+</article>
+<div id="demo">
 <img style="display:none;" id="srcimage" src="barrbrain.jpg" onload="init_image()"/>
 <div>
   <label for="scale">Quantization level (log scale)</label>
@@ -38,4 +101,5 @@ div > label, div > input, div > span {
   <input id="userImage" type="file" onchange="loadUserImage(event)" />
 </div>
 <canvas id='canvas' width=1 height=1></canvas>
+</div>
 </body>
