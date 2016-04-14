@@ -51,39 +51,22 @@ function quantize(w, h) {
   w = w | 0;
   h = h | 0;
   var i = 0, j = 0, p = imageptr, v = 0, k = 0, l = 0, q = 0;
+  var buf = imageptr + (w*h*3)<<2;
   for (i = 0; i < h * 3; i += 8) {
     for (j = 0; j < w; j += 8) {
-      dct.od_bin_fdct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
-    }
-    for (j = 0; j < w; j += 8) {
+      dct.od_bin_fdct8x8(buf, 8, (p + j) << 2, w, tempptr);
       for (k = 0; k < 8; k++) {
 	for (l = 0; l < 8; l++) {
           var q = quant_table[k][l] * 8191 >> 8;
-          v = I4[p + j + k*w+l];
-          v = Math.round(v / q) * q;
-          I4[p + j + k*w+l] = v;
+          v = I4[(buf>>2)+k*8+l];
+          v = Math.round(v / q);
+          I4[(buf>>2)+k*8+l] = v * q;
         }
       }
-    }
-    for (j = 0; j < w; j += 8) {
-      dct.od_bin_idct8x8((p + j) << 2, w, (p + j) << 2, w, tempptr)
+      dct.od_bin_idct8x8((p + j) << 2, w, buf, 8, tempptr);
     }
     p += 8 * w;
   }
-}
-function dering_image(w, h) {
-  var i = 0, j = 0, p = 0;
-  var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
-  var od_dering = dering.od_dering;
-  dering.init_tables(dering_tables);
-  for (j = 8; j + 8 < h; j = j+8|0) {
-    for (i = 8; i + 8 < w; i = i+8|0) {
-      p = imageptr +((j*w+i)<<2)|0
-      od_dering(p, w, p, w, 0, 8191>>4, dering_tables);
-      od_dering(p+(w*h<<2), w, p+(w*h<<2), w, 1, 8191>>4, dering_tables);
-      od_dering(p+(w*h<<3), w, p+(w*h<<3), w, 3, 8191>>4, dering_tables);
-    }
-   }
 }
 function foo() {
   var canvas = document.getElementById('canvas');
@@ -123,7 +106,8 @@ function foo() {
   ctx = canvas.getContext('2d');
   ctx.putImageData(image, 0, 0);
   ts = new Date();
-  dering_image(w, h);
+  var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
+  dering.dering_image(imageptr, w, h, 8191>>4, dering_tables);
   console.log(new Date() - ts);
   ycbco2rgb(imagebuffer, image.data, w*h);
   canvas = document.getElementById('canvas4');

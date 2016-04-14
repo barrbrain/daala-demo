@@ -274,3 +274,21 @@ void od_dering(int *y, int ystride,
   }
   od_filter_dering_orthogonal_8x8_c(y, ystride, in, x, xstride, thresh, dir, tables);
 }
+
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+void dering_image(int *y,
+ int w, int h,
+ int threshold, int *tables) {
+ int i, j, k;
+ init_tables(tables);
+ for (k = 0; k < 3; k++) {
+  for (j = 8; j + 8 < h; j += 8) {
+    int *p = y + j * w;
+    for (i = 8; i + 8 < w; i += 8) {
+      od_dering(p + i, w, p + i, w, k, threshold, tables);
+    }
+   }
+   y += w * h;
+ }
+}
