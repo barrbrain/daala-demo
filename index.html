@@ -61,12 +61,17 @@ a:hover {
   margin-top: 1em;
 }
 
-#demo > div {
-  margin-bottom: 1em;
+#status {
+  display: block;
+  font-style: italic;
 }
 
-#status {
-  font-style: italic;
+.parameter {
+  display: inline-block;
+}
+
+#demo > div {
+  margin: 1ex;
 }
 </style>
 <body>
@@ -92,19 +97,19 @@ However, it still illustrates the many uses of directed selective smoothing in r
 <div id="demo">
 <img style="display:none;" id="srcimage" src="barrbrain.jpg" onload="init_image()"/>
 <div>
+  <label for="userImage">Load your own image (not uploaded)</label>
+  <input id="userImage" type="file" onchange="loadUserImage(event)" />
+</div><div class="parameter">
   <label for="scale">Quantization level (log scale)</label>
   <input id="scale" type="range" min="1" max="63" step="1" value="16" oninput="changeScale(this)"/>
   <span id="scaleVal">2.875</span>
-</div><div>
+</div><div class="parameter">
   <label for="lapping">4-point lapping filter (deblocking)</label>
   <input id="lapping" checked type="checkbox" onchange="changeLapping(this)"/>
-</div><div>
+</div><div class="parameter">
   <label for="strenth">Deringing filter strength</label>
   <input id="strength" type="range" min="0" max="5" step="1" value="3" oninput="changeStrength(this)"/>
   <span id="strengthVal">1</span>
-</div><div>
-  <label for="userImage">Load your own image (not uploaded)</label>
-  <input id="userImage" type="file" onchange="loadUserImage(event)" />
 </div>
 <div id="status">&nbsp;</div>
 <canvas id='canvas' width=1 height=1></canvas>
