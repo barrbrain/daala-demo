@@ -99,7 +99,7 @@ function init_image() {
   var w = srcimage.width;
   var h = srcimage.height;
   if (w * h > 4096 * 2169) {
-    var scale = 4096.0 * 2169.0 / (w * h);
+    var scale = Math.sqrt(4096.0 * 2169.0 / (w * h));
     w = w * scale | 0;
     h = h * scale | 0;
     w = w - (w & 7);
