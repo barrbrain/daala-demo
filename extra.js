@@ -98,10 +98,17 @@ function init_image() {
   var srcimage = document.getElementById('srcimage');
   var w = srcimage.width;
   var h = srcimage.height;
+  if (w * h > 4096 * 2169) {
+    var scale = 4096.0 * 2169.0 / (w * h);
+    w = w * scale | 0;
+    h = h * scale | 0;
+    w = w - (w & 7);
+    h = h - (h & 7);
+  }
   canvas.width = w;
   canvas.height = h;
   var ctx = canvas.getContext('2d');
-  ctx.drawImage(srcimage, 0, 0, w, h, 0, 0, w, h);
+  ctx.drawImage(srcimage, 0, 0, srcimage.width, srcimage.height, 0, 0, w, h);
   window.imagedata = ctx.getImageData(0, 0, w, h);
   window.imagebuffer = window.I4.subarray(imageptr>>2, (imageptr>>2) + w * h * 3);
   update_image();
