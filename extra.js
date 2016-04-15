@@ -35,6 +35,7 @@ function init_image() {
   var data = new ArrayBuffer(w*h*4);
   new Uint8ClampedArray(data).set(imagedata.data);
   worker.postMessage({image: {width: w, height: h, data: data}}, [data]);
+  document.getElementById('status').innerText = 'Loaded image...';
 }
 
 worker.addEventListener('message', function(e) {
