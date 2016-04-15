@@ -40,7 +40,8 @@ function init_image() {
 
 worker.addEventListener('message', function(e) {
   var message = e.data;
-  document.getElementById('status').innerText = 'Applied all filters in ' + message.timing + ' ms.';
+  var kb = Math.round(message.bits / 800) / 10;
+  document.getElementById('status').innerText = 'Applied all filters in ' + message.timing + ' ms. Approximately ' + kb + ' kilobytes.';
   var w = message.image.width;
   var h = message.image.height;
   var imagedata = new ImageData(new Uint8ClampedArray(message.image.data), w, h);
