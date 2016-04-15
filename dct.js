@@ -141,4 +141,4 @@ function _od_bin_fdct8x8(i3, i4, i1, i2, i5) {
 }
 
 return { od_bin_fdct8: _od_bin_fdct8, od_bin_idct8: _od_bin_idct8, od_bin_idct8x8: _od_bin_idct8x8, od_bin_fdct8x8: _od_bin_fdct8x8};
-})(window, null, window.HEAP);
+})(self, null, self.HEAP);

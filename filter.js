@@ -192,4 +192,4 @@ lapvert:_lapvert,
 unlapvert:_unlapvert,
 laphorz:_laphorz,
 unlaphorz:_unlaphorz};
-})(window, null, window.HEAP);
+})(self, null, self.HEAP);

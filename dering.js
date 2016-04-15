@@ -459,4 +459,4 @@ function _dering_image(i5, i11, i8, i10, i9) {
 }
 
 return { od_dir_find8: _od_dir_find8, init_tables: _init_tables, od_filter_dering_direction_8x8_c: _od_filter_dering_direction_8x8_c, od_filter_dering_orthogonal_8x8_c: _od_filter_dering_orthogonal_8x8_c, od_dering: _od_dering, dering_image: _dering_image };
-})(window, null, window.HEAP);
+})(self, null, self.HEAP);

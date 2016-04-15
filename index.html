@@ -111,12 +111,12 @@ However, it still illustrates the many uses of directed selective smoothing in r
 </div>
 <div class="parameter">
   <label for="scale">Quantization level (log scale)</label>
-  <input id="scale" type="range" min="1" max="63" step="1" value="16" oninput="changeScale(this)"/>
+  <input id="scale" type="range" min="1" max="63" step="1" value="16" oninput="changeScale(this, false)" onchange="changeScale(this, true)"/>
   <span id="scaleVal">2.875</span>
 </div>
 <div class="parameter">
   <label for="strenth">Deringing filter strength</label>
-  <input id="strength" type="range" min="0" max="5" step="1" value="3" oninput="changeStrength(this)"/>
+  <input id="strength" type="range" min="0" max="5" step="1" value="3" oninput="changeStrength(this, false)" onchange="changeStrength(this, true)"/>
   <span id="strengthVal">1</span>
 </div>
 <div id="status">&nbsp;</div>
