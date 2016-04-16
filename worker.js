@@ -62,11 +62,15 @@ function signedCode(x) {
 }
 
 var last_dc = 0;
-function bitrate(x, cg) {
+var last_qg = 0;
+function bitrate(x, qg) {
   x = x | 0;
   var i = 0, z = 0, K_n = 0, c = 0, E_run = 0, E_yn = 0, y = 0;
   c += signedCode(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
+  c += signedCode(qg-last_qg) // Gain
+  last_qg = qg;
+  if (qg == 0) return c|0;
   for (i = 1; i < 64; i++) {
     y = Math.abs(I4[x + zigzag[64-i]]);
     if (y == 0) {
@@ -88,7 +92,6 @@ function bitrate(x, cg) {
       z = 0;
     }
   }
-  c += 63 - 2 * Math.clz32(cg+1); // Gain
   return c|0;
 }
 
@@ -97,7 +100,7 @@ function pvq8x8(x, scale) {
   var i = 0, l = 0, v = 0;
   var dg = 1.;
   var bitcount = 0;
-  var cg = 0;
+  var qg = 0, g = 0, k = 0;
   I4[x] = Math.round(I4[x] * 16 / scale);
   for (k = 1; k < 64; k++) {
     v = Math.round(I4[x+k] * 16 / quant_table[k])|0;
@@ -105,22 +108,30 @@ function pvq8x8(x, scale) {
     total_sq += v * v;
     I4[x+k] = v;
   }
-  if (total == 0) return;
-  cg = Math.round(Math.sqrt(total_sq) * 16 / scale) | 0;
-  target = cg / total;
+  qg = Math.round(Math.sqrt(total_sq) * 16 / scale) | 0;
+  g = qg * scale >> 4;
+  if (qg == 0) {
+    for (k = 1; k < 64; k++) {
+      I4[x+k] = 0;
+    }
+    bitcount = bitrate(x, qg);
+    I4[x] = I4[x] * scale >> 4;
+    return bitcount|0;
+  }
+  target = qg/total;
   for (k = 1; k < 64; k++) {
     v = Math.round(I4[x+k]*target)|0;
     rounded += v * v;
     I4[x+k] = v;
   }
-  bitcount = bitrate(x, cg);
-  dg = Math.sqrt(total_sq) / Math.sqrt(rounded);
+  bitcount = bitrate(x, qg);
+  dg = g / Math.sqrt(rounded);
   for (k = 1; k < 64; k++) {
     v = I4[x+k];
     v = Math.round(v*dg)|0;
     I4[x+k] = v * quant_table[k] >> 4;
   }
-  I4[x] = I4[x] * scale >> 4
+  I4[x] = I4[x] * scale >> 4;
   return bitcount|0;
 }
 
@@ -131,6 +142,7 @@ function quantize(w, h, scale) {
   var buf = imageptr + (w*h*3)<<2;
   var bitcount = 0;
   last_dc = 0;
+  last_qg = 0;
   for (i = 0; i < h * 3; i += 8) {
     for (j = 0; j < w; j += 8) {
       dct.od_bin_fdct8x8(buf, 8, (p + j) << 2, w, tempptr);
