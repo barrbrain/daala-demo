@@ -35,7 +35,12 @@ function ycgco2rgb(inbuf, outbuf, pixels) {
   }
 }
 
-var quant_table = [
+var MAG8 = [
+  0.936496, 0.892830, 0.938452, 0.970087,
+  0.974272, 0.967954, 0.974035, 0.990480
+];
+
+var M4 = [
 16, 16, 18, 21, 24, 28, 32, 36,
 16, 17, 20, 21, 24, 27, 31, 35,
 18, 20, 24, 25, 27, 31, 33, 38,
@@ -44,6 +49,20 @@ var quant_table = [
 28, 27, 31, 34, 38, 44, 50, 58,
 32, 31, 33, 37, 43, 50, 58, 68,
 36, 35, 38, 42, 49, 58, 68, 78];
+
+var qm = new Int16Array(64);
+var qm_inv = new Int16Array(64);
+function init_qm() {
+  var i = 0, j = 0;
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      qm[i * 8 + j] = Math.round((1 << 15) * (config.lapping ? MAG8[i] * MAG8[j] : 1.) / M4[i * 8 + j]);
+      qm_inv[i * 8 + j] = Math.round((1 << 23) / qm[i * 8 + j]);
+    }
+  }
+  qm[0] = 1 << 11;
+  qm_inv[0] = 1 << 12;
+}
 
 var zigzag = [
  0,  1,  8,  9,  2, 16, 10,  3,
@@ -104,7 +123,7 @@ function pvq8x8(x, scale) {
   var qg = 0, g = 0, k = 0;
   I4[x] = Math.round(I4[x] * 16 / scale);
   for (k = 1; k < 64; k++) {
-    v = Math.round(I4[x+k] * 16 / quant_table[k])|0;
+    v = I4[x+k] * qm_inv[k] >> 12;
     total += Math.abs(v);
     total_sq += v * v;
     I4[x+k] = v;
@@ -130,7 +149,7 @@ function pvq8x8(x, scale) {
   for (k = 1; k < 64; k++) {
     v = I4[x+k];
     v = Math.round(v*dg)|0;
-    I4[x+k] = v * quant_table[k] >> 4;
+    I4[x+k] = v * qm[k] >> 11;
   }
   I4[x] = I4[x] * scale >> 4;
   return bitcount|0;
@@ -144,6 +163,7 @@ function quantize(w, h, scale) {
   var bitcount = 0;
   last_dc = 0;
   last_qg = 0;
+  init_qm();
   for (i = 0; i < h * 3; i += 8) {
     for (j = 0; j < w; j += 8) {
       dct.od_bin_fdct8x8(buf, 8, (p + j) << 2, w, tempptr);
