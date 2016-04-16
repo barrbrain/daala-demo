@@ -76,17 +76,18 @@ function bitrate(x, qg) {
     if (y == 0) {
       z++;
       if (K_n > i) {
-        E_yn = K_n / i | 0;
+        E_yn = Math.round(K_n / i) | 0;
         c += signedCode(y - E_yn); // Explicit zero
+        z = 0;
       }
     } else {
       c++; // Sign
       K_n = K_n + y;
       if (y == K_n) continue; // Last symbol has P(1)
-      E_yn = K_n / i | 0;
+      E_yn = Math.round(K_n / i) | 0;
       c += signedCode(y - E_yn);
       if (K_n <= i) {
-        E_run = i / K_n | 0;
+        E_run = Math.round(i / K_n) | 0;
         c += signedCode(z - E_run);
       }
       z = 0;
