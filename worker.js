@@ -80,12 +80,20 @@ function signedCode(x) {
   return 63 - 2 * Math.clz32(x + 1);
 }
 
+function lenDcDelta(x) {
+  x = x | 0;
+  var i = 0;
+  if (x == 0) return 2;
+  i = 32 - Math.clz32(Math.abs(x));
+  return i < 6 ? 3 + i : 2 * i - 2;
+}
+
 var last_dc = 0;
 var last_qg = 0;
 function bitrate(x, qg) {
   x = x | 0;
   var i = 0, z = 0, K_n = 0, c = 0, E_run = 0, E_yn = 0, y = 0;
-  c += signedCode(I4[x]-last_dc); // DC-delta
+  c += lenDcDelta(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
   c += signedCode(qg-last_qg) // Gain
   last_qg = qg;
@@ -115,30 +123,46 @@ function bitrate(x, qg) {
   return c|0;
 }
 
+function usq8x8(x, scale) {
+  var bitcount = 0;
+  var v = 0, k = 0;
+  var total = 0;
+  var scale_inv = Math.round((1 << 16) / scale)|0;
+  for (k = 1; k < 64; k++) {
+    v = Math.round(I4[x+k] * qm_inv[k] * scale_inv / (1 << 28));
+    total += Math.abs(v);
+    I4[x+k] = v;
+  }
+  bitcount = bitrate(x, total);
+  for (k = 1; k < 64; k++) {
+    v = I4[x+k];
+    I4[x+k] = v * qm[k] * scale >> 11;
+  }
+  return bitcount|0;
+}
+
 function pvq8x8(x, scale) {
   var total = 0, total_sq = 0, rounded = 0, target = 0;
   var i = 0, l = 0, v = 0;
   var dg = 1.;
   var bitcount = 0;
   var qg = 0, g = 0, k = 0;
-  I4[x] = Math.round(I4[x] * 16 / scale);
   for (k = 1; k < 64; k++) {
     v = I4[x+k] * qm_inv[k] >> 12;
     total += Math.abs(v);
     total_sq += v * v;
     I4[x+k] = v;
   }
-  qg = Math.round(Math.sqrt(total_sq) * 16 / scale) | 0;
-  g = qg * scale >> 4;
+  qg = Math.round(Math.sqrt(total_sq) / scale) | 0;
+  g = qg * scale;
   if (qg == 0) {
     for (k = 1; k < 64; k++) {
       I4[x+k] = 0;
     }
     bitcount = bitrate(x, qg);
-    I4[x] = I4[x] * scale >> 4;
     return bitcount|0;
   }
-  target = qg/total;
+  target = Math.round((qg - 0.2) * Math.sqrt(33)) / total;
   for (k = 1; k < 64; k++) {
     v = Math.round(I4[x+k]*target)|0;
     rounded += v * v;
@@ -151,15 +175,14 @@ function pvq8x8(x, scale) {
     v = Math.round(v*dg)|0;
     I4[x+k] = v * qm[k] >> 11;
   }
-  I4[x] = I4[x] * scale >> 4;
   return bitcount|0;
 }
 
-function quantize(w, h, scale) {
+function quantize(w, h, scale, method) {
   w = w | 0;
   h = h | 0;
-  var i = 0, j = 0, p = imageptr, v = 0, k = 0, l = 0, q = 0;
-  var buf = imageptr + (w*h*3)<<2;
+  var i = 0, j = 0, p = imageptr>>2, v = 0, k = 0, l = 0, q = 0;
+  var buf = imageptr + ((w*h*3)<<2);
   var bitcount = 0;
   last_dc = 0;
   last_qg = 0;
@@ -167,7 +190,7 @@ function quantize(w, h, scale) {
   for (i = 0; i < h * 3; i += 8) {
     for (j = 0; j < w; j += 8) {
       dct.od_bin_fdct8x8(buf, 8, (p + j) << 2, w, tempptr);
-      bitcount += pvq8x8(buf>>2, scale);
+      bitcount += method == 'pvq' ? pvq8x8(buf>>2, scale) : usq8x8(buf>>2, scale);
       dct.od_bin_idct8x8((p + j) << 2, w, buf, 8, tempptr);
     }
     p += 8 * w;
@@ -176,6 +199,7 @@ function quantize(w, h, scale) {
 }
 
 var config = {
+  method: 'pvq',
   scale: 409,
   strength: 1.0,
   lapping: true
@@ -201,14 +225,14 @@ function update_image() {
     filter.lapvert(imageptr, w, h);
     filter.laphorz(imageptr, w, h, tempptr);
   }
-  var bitcount = quantize(w, h, config.scale);
+  var bitcount = quantize(w, h, config.scale, config.method);
   if (config.lapping) {
     filter.unlaphorz(imageptr, w, h, tempptr);
     filter.unlapvert(imageptr, w, h);
   }
   if (config.strength > 0) {
     var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
-    dering.dering_image(imageptr, w, h, config.scale*config.strength>>4, dering_tables);
+    dering.dering_image(imageptr, w, h, config.scale*config.strength, dering_tables);
   }
   var timing = new Date() - ts;
   var data = new ArrayBuffer(w*h*4);
@@ -229,6 +253,9 @@ onmessage = function(e) {
   }
   if ('scale' in message) {
     config.scale = message.scale;
+  }
+  if ('method' in message) {
+    config.method = message.method;
   }
   update_image();
 };

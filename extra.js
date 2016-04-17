@@ -75,3 +75,8 @@ function changeScale(scale, post) {
   document.getElementById('scaleVal').innerText = value / 16.;
   if (post) worker.postMessage({scale: value});
 }
+
+function changeMethod(method) {
+  var value = method.value;
+  worker.postMessage({method: value});
+}
