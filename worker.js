@@ -141,6 +141,80 @@ function usq8x8(x, scale) {
   return bitcount|0;
 }
 
+const pvqbuf = new Float64Array(64);
+const pvqout = new Int32Array(64);
+const pvqin = new Int32Array(64);
+function pvq_search(k) {
+ k = k | 0;
+ var i = 0, xy = 0.0, j = 0, yy = 0.0, txy = 0.0, tyy = 0.0, bxy = 0.0, byy = 0.0, h = 0, better = 0;
+ i = 0;
+ do {
+  pvqbuf[i] = +Math.abs(+(+(pvqin[i] | 0)));
+  i = i + 1 | 0;
+ } while ((i | 0) != 63);
+ i = 0;
+ xy = 0.0;
+ do {
+  xy = xy + +pvqbuf[i];
+  i = i + 1 | 0;
+ } while ((i | 0) != 63);
+ txy = 1.0 / xy;
+ tyy = +(k | 0);
+ i = 0;
+ j = 0;
+ xy = 0.0;
+ yy = 0.0;
+ do {
+  byy = +pvqbuf[j];
+  h = ~~+Math.floor(+(txy * (tyy * byy)));
+  pvqout[j] = h;
+  xy = xy + byy * +(h | 0);
+  yy = yy + +(Math.imul(h, h) | 0);
+  i = h + i | 0;
+  j = j + 1 | 0;
+ } while ((j | 0) != 63);
+ if ((i | 0) < (k | 0)) while (1) {
+  bxy = -10.0;
+  byy = 1.0;
+  h = 0;
+  j = 0;
+  while (1) {
+   txy = xy + +pvqbuf[h];
+   tyy = yy + +(pvqout[h] << 1 | 0) + 1.0;
+   txy = txy * txy;
+   if (!h) better = 1; else if (byy * txy > bxy * tyy) better = 1; else {
+    txy = bxy;
+    tyy = byy;
+   }
+   if (better) {
+    better = 0;
+    j = h;
+   }
+   h = h + 1 | 0;
+   if ((h | 0) == 63) break; else {
+    bxy = txy;
+    byy = tyy;
+   }
+  }
+  xy = xy + +pvqbuf[j];
+  h = j;
+  j = pvqout[h] | 0;
+  pvqout[h] = j + 1;
+  i = i + 1 | 0;
+  if ((i | 0) == (k | 0)) {
+   i = 0;
+   break;
+  } else yy = yy + +(j << 1 | 0) + 1.0;
+ } else i = 0;
+ do {
+  if ((pvqin[i] | 0) < 0) {
+   pvqout[i] = 0 - (pvqout[i] | 0);
+  }
+  i = i + 1 | 0;
+ } while ((i | 0) != 63);
+ return;
+}
+
 function pvq8x8(x, scale) {
   var total = 0, total_sq = 0, rounded = 0, target = 0;
   var i = 0, l = 0, v = 0;
@@ -149,9 +223,8 @@ function pvq8x8(x, scale) {
   var qg = 0, g = 0, k = 0;
   for (k = 1; k < 64; k++) {
     v = I4[x+k] * qm_inv[k] >> 12;
-    total += Math.abs(v);
     total_sq += v * v;
-    I4[x+k] = v;
+    pvqin[k - 1] = v;
   }
   qg = Math.round(Math.sqrt(total_sq) / scale) | 0;
   g = qg * scale;
@@ -162,16 +235,17 @@ function pvq8x8(x, scale) {
     bitcount = bitrate(x, qg);
     return bitcount|0;
   }
-  target = Math.round((qg - 0.2) * Math.sqrt(33)) / total;
+  target = qg * 4 - 1;
+  pvq_search(target);
   for (k = 1; k < 64; k++) {
-    v = Math.round(I4[x+k]*target)|0;
+    v = pvqout[k - 1]
     rounded += v * v;
     I4[x+k] = v;
   }
   bitcount = bitrate(x, qg);
   dg = g / Math.sqrt(rounded);
   for (k = 1; k < 64; k++) {
-    v = I4[x+k];
+    v = pvqout[k - 1];
     v = Math.round(v*dg)|0;
     I4[x+k] = v * qm[k] >> 11;
   }

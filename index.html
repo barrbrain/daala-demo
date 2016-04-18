@@ -91,9 +91,9 @@ and transform to <a href="https://en.wikipedia.org/wiki/YCgCo">YCgCo</a> before 
 <p>We apply the 4-point <a href="https://people.xiph.org/~xiphmont/demo/daala/demo1.shtml">lapping along block edges</a>
 that has been settled on in <a href="https://xiph.org/daala/">Daala</a>. It balances some relief from blocking
 artifacts with less ringing than a full block transform.
-<p>For now, quantization is a simple approximation to
+<p>For now, quantization is a single-band implementation of
 <a href="https://people.xiph.org/~jm/daala/pvq_demo/">Perceptual Vector Quantization</a>
-without activity masking or frequency-domain prediction. The bitrate is estimated using
+without activity masking, frequency-domain prediction or rate-distortion optimization. The bitrate is estimated using
 <a href="https://en.wikipedia.org/wiki/Exponential-Golomb_coding">Exponential-Golomb coding</a>
 for all residuals. The expectations for PVQ are static, with both parameters fixed at 1.
 DC coefficents are simply <a href="https://en.wikipedia.org/wiki/Delta_encoding">delta encoded</a>.
