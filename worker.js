@@ -215,7 +215,7 @@ function pvq_search(k) {
  return;
 }
 
-function pvq8x8(x, scale) {
+function pvq8x8(x, scale, beta) {
   var total = 0, total_sq = 0, rounded = 0, target = 0;
   var i = 0, l = 0, v = 0;
   var dg = 1.;
@@ -226,8 +226,8 @@ function pvq8x8(x, scale) {
     total_sq += v * v;
     pvqin[k - 1] = v;
   }
-  qg = Math.round(Math.sqrt(total_sq) / scale) | 0;
-  g = qg * scale;
+  qg = ~~+Math.round(4096 * Math.pow(Math.sqrt(total_sq) / 4096, 1. / beta) / scale / beta);
+  g = ~~+Math.round(4096 * Math.pow(qg * beta * scale / 4096, beta));
   if (qg == 0) {
     for (k = 1; k < 64; k++) {
       I4[x+k] = 0;
@@ -235,7 +235,7 @@ function pvq8x8(x, scale) {
     bitcount = bitrate(x, qg);
     return bitcount|0;
   }
-  target = qg * 4 - 1;
+  target = ~~+Math.round((qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
   pvq_search(target);
   for (k = 1; k < 64; k++) {
     v = pvqout[k - 1]
@@ -262,9 +262,10 @@ function quantize(w, h, scale, method) {
   last_qg = 0;
   init_qm();
   for (i = 0; i < h * 3; i += 8) {
+    var beta = i < h ? config.beta : 1.;
     for (j = 0; j < w; j += 8) {
       dct.od_bin_fdct8x8(buf, 8, (p + j) << 2, w, tempptr);
-      bitcount += method == 'pvq' ? pvq8x8(buf>>2, scale) : usq8x8(buf>>2, scale);
+      bitcount += method == 'pvq' ? pvq8x8(buf>>2, scale, beta) : usq8x8(buf>>2, scale);
       dct.od_bin_idct8x8((p + j) << 2, w, buf, 8, tempptr);
     }
     p += 8 * w;
@@ -274,8 +275,9 @@ function quantize(w, h, scale, method) {
 
 var config = {
   method: 'pvq',
-  scale: 409,
-  strength: 1.0,
+  scale: 421,
+  beta: 1.5,
+  strength: 0.5,
   lapping: true
 };
 
@@ -306,7 +308,7 @@ function update_image() {
   }
   if (config.strength > 0) {
     var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
-    dering.dering_image(imageptr, w, h, config.scale*config.strength, dering_tables);
+    dering.dering_image(imageptr, w, h, ~~+config.scale*Math.pow(config.strength, 0.84182), dering_tables);
   }
   var timing = new Date() - ts;
   var data = new ArrayBuffer(w*h*4);
@@ -327,6 +329,9 @@ onmessage = function(e) {
   }
   if ('scale' in message) {
     config.scale = message.scale;
+  }
+  if ('beta' in message) {
+    config.beta = message.beta;
   }
   if ('method' in message) {
     config.method = message.method;

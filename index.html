@@ -93,7 +93,7 @@ that has been settled on in <a href="https://xiph.org/daala/">Daala</a>. It bala
 artifacts with less ringing than a full block transform.
 <p>For now, quantization is a single-band implementation of
 <a href="https://people.xiph.org/~jm/daala/pvq_demo/">Perceptual Vector Quantization</a>
-without activity masking, frequency-domain prediction or rate-distortion optimization. The bitrate is estimated using
+without frequency-domain prediction or rate-distortion optimization. The bitrate is estimated using
 <a href="https://en.wikipedia.org/wiki/Exponential-Golomb_coding">Exponential-Golomb coding</a>
 for all residuals. The expectations for PVQ are static, with both parameters fixed at 1.
 DC coefficents are simply <a href="https://en.wikipedia.org/wiki/Delta_encoding">delta encoded</a>.
@@ -122,13 +122,18 @@ However, it still illustrates the many uses of directed selective smoothing in r
 </div>
 <div class="parameter">
   <label for="scale">Quantization level (log scale)</label>
-  <input id="scale" type="range" min="1" max="63" step="1" value="16" oninput="changeScale(this, false)" onchange="changeScale(this, true)"/>
-  <span id="scaleVal">2.875</span>
+  <input id="scale" type="range" min="1" max="63" step="1" value="36" oninput="changeScale(this, false)" onchange="changeScale(this, true)"/>
+  <span id="scaleVal">26.3125</span>
+</div>
+<div class="parameter">
+  <label for="beta">Beta (AM)</label>
+  <input id="beta" type="range" min="12" max="24" step="1" value="18" oninput="changeBeta(this, false)" onchange="changeBeta(this, true)"/>
+  <span id="betaVal">1.5</span>
 </div>
 <div class="parameter">
   <label for="strenth">Deringing filter strength</label>
-  <input id="strength" type="range" min="0" max="5" step="1" value="3" oninput="changeStrength(this, false)" onchange="changeStrength(this, true)"/>
-  <span id="strengthVal">1</span>
+  <input id="strength" type="range" min="0" max="5" step="1" value="1" oninput="changeStrength(this, false)" onchange="changeStrength(this, true)"/>
+  <span id="strengthVal">0.5</span>
 </div>
 <div id="status">&nbsp;</div>
 <canvas id='canvas' width=1 height=1></canvas>

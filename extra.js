@@ -72,8 +72,14 @@ function changeLapping(lapping) {
 
 function changeScale(scale, post) {
   var value = cq_map[scale.value];
-  document.getElementById('scaleVal').innerText = value / 16.;
+  document.getElementById('scaleVal').innerText = (value / 16.).toPrecision(4);
   if (post) worker.postMessage({scale: value});
+}
+
+function changeBeta(beta, post) {
+  var value = beta.value / 12.;
+  document.getElementById('betaVal').innerText = value.toPrecision(4);
+  if (post) worker.postMessage({beta: value});
 }
 
 function changeMethod(method) {
