@@ -56,8 +56,8 @@ function init_qm() {
   var i = 0, j = 0;
   for (i = 0; i < 8; i++) {
     for (j = 0; j < 8; j++) {
-      qm[i * 8 + j] = Math.round((1 << 15) * (config.lapping ? MAG8[i] * MAG8[j] : 1.) / M4[i * 8 + j]);
-      qm_inv[i * 8 + j] = Math.round((1 << 23) / qm[i * 8 + j]);
+      qm[i * 8 + j] = Math.floor(.5+ (1 << 15) * (config.lapping ? MAG8[i] * MAG8[j] : 1.) / M4[i * 8 + j]);
+      qm_inv[i * 8 + j] = Math.floor(.5+ (1 << 23) / qm[i * 8 + j]);
     }
   }
   qm[0] = 1 << 11;
@@ -103,7 +103,7 @@ function bitrate(x, qg) {
     if (y == 0) {
       z++;
       if (K_n > i) {
-        E_yn = Math.round(K_n / i) | 0;
+        E_yn = Math.floor(.5+ K_n / i) | 0;
         c += signedCode(y - E_yn); // Explicit zero
         z = 0;
       }
@@ -111,10 +111,10 @@ function bitrate(x, qg) {
       c++; // Sign
       K_n = K_n + y;
       if (y == K_n) continue; // Last symbol has P(1)
-      E_yn = Math.round(K_n / i) | 0;
+      E_yn = Math.floor(.5+ K_n / i) | 0;
       c += signedCode(y - E_yn);
       if (K_n <= i) {
-        E_run = Math.round(i / K_n) | 0;
+        E_run = Math.floor(.5+ i / K_n) | 0;
         c += signedCode(z - E_run);
       }
       z = 0;
@@ -127,7 +127,7 @@ function usq8x8(x, scale) {
   var bitcount = 0;
   var v = 0, k = 0;
   var total = 0;
-  var scale_inv = Math.round((1 << 16) / scale)|0;
+  var scale_inv = Math.floor(.5+ (1 << 16) / scale)|0;
   for (k = 1; k < 64; k++) {
     v = Math.round(I4[x+k] * qm_inv[k] * scale_inv / (1 << 28));
     total += Math.abs(v);
@@ -226,8 +226,8 @@ function pvq8x8(x, scale, beta) {
     total_sq += v * v;
     pvqin[k - 1] = v;
   }
-  qg = ~~+Math.round(4096 * Math.pow(Math.sqrt(total_sq) / 4096, 1. / beta) / scale / beta);
-  g = ~~+Math.round(4096 * Math.pow(qg * beta * scale / 4096, beta));
+  qg = ~~+Math.floor(.5+ 4096 * Math.pow(Math.sqrt(total_sq) / 4096, 1. / beta) / scale / beta);
+  g = ~~+Math.floor(.5+ 4096 * Math.pow(qg * beta * scale / 4096, beta));
   if (qg == 0) {
     for (k = 1; k < 64; k++) {
       I4[x+k] = 0;
@@ -235,7 +235,7 @@ function pvq8x8(x, scale, beta) {
     bitcount = bitrate(x, qg);
     return bitcount|0;
   }
-  target = ~~+Math.round((qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
+  target = ~~+Math.floor(.5+ (qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
   pvq_search(target);
   for (k = 1; k < 64; k++) {
     v = pvqout[k - 1]
