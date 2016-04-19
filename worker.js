@@ -74,52 +74,25 @@ var zigzag = [
 51, 31, 45, 59, 38, 52, 39, 46,
 60, 53, 47, 61, 54, 55, 62, 63];
 
-function signedCode(x) {
-  x = x | 0;
-  x = (x << 1) ^ (x >> 31);
-  return 63 - 2 * Math.clz32(x + 1);
-}
-
 function lenDcDelta(x) {
   x = x | 0;
   var i = 0;
   if (x == 0) return 2;
-  i = 32 - Math.clz32(Math.abs(x));
-  return i < 6 ? 3 + i : 2 * i - 2;
+  i = 32 - Math.clz32(Math.abs(x))|0;
+  return i < 6 ? 3 + i : (i << 1) - 2;
 }
 
 var last_dc = 0;
 var last_qg = 0;
-function bitrate(x, qg) {
+function bitrate(x, qg, k) {
   x = x | 0;
   var i = 0, z = 0, K_n = 0, c = 0, E_run = 0, E_yn = 0, y = 0;
   c += lenDcDelta(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
-  c += signedCode(qg-last_qg) // Gain
+  c += lenDcDelta(qg-last_qg) // Gain
   last_qg = qg;
   if (qg == 0) return c|0;
-  for (i = 1; i < 64; i++) {
-    y = Math.abs(I4[x + zigzag[64-i]]);
-    if (y == 0) {
-      z++;
-      if (K_n > i) {
-        E_yn = Math.floor(.5+ K_n / i) | 0;
-        c += signedCode(y - E_yn); // Explicit zero
-        z = 0;
-      }
-    } else {
-      c++; // Sign
-      K_n = K_n + y;
-      if (y == K_n) continue; // Last symbol has P(1)
-      E_yn = Math.floor(.5+ K_n / i) | 0;
-      c += signedCode(y - E_yn);
-      if (K_n <= i) {
-        E_run = Math.floor(.5+ i / K_n) | 0;
-        c += signedCode(z - E_run);
-      }
-      z = 0;
-    }
-  }
+  c = c + 63 * Math.log2(1 + Math.log(63 * 2) * k / 63)|0; // PVQ estimate
   return c|0;
 }
 
@@ -133,7 +106,7 @@ function usq8x8(x, scale) {
     total += Math.abs(v);
     I4[x+k] = v;
   }
-  bitcount = bitrate(x, total);
+  bitcount = bitrate(x, total, total);
   for (k = 1; k < 64; k++) {
     v = I4[x+k];
     I4[x+k] = v * qm[k] * scale >> 11;
@@ -232,7 +205,7 @@ function pvq8x8(x, scale, beta) {
     for (k = 1; k < 64; k++) {
       I4[x+k] = 0;
     }
-    bitcount = bitrate(x, qg);
+    bitcount = bitrate(x, qg, qg);
     return bitcount|0;
   }
   target = ~~+Math.floor(.5+ (qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
@@ -242,7 +215,7 @@ function pvq8x8(x, scale, beta) {
     rounded += v * v;
     I4[x+k] = v;
   }
-  bitcount = bitrate(x, qg);
+  bitcount = bitrate(x, qg, target);
   dg = g / Math.sqrt(rounded);
   for (k = 1; k < 64; k++) {
     v = pvqout[k - 1];
