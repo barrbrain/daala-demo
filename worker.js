@@ -82,15 +82,18 @@ function lenDcDelta(x) {
   return i < 6 ? 3 + i : (i << 1) - 2;
 }
 
-function lfm1(x) /* ~= log(factorial(x-1)) */ {
-  x=+x;
-  return +((x-.5)*+Math.log(x)-x+.5*+Math.log(2.*Math.PI)+1./(12.*x));
-}
-
-function weakCompositionEntropy(k, n) /* ceil(log2(k+n-1 choose n-1)) */ {
+// ceil(log2(k+n-1 choose n-1))
+function weakCompositionEntropy(k, n) {
   k=k|0;
   n=n|0;
-  return ~~+Math.ceil((+lfm1(+((k+n)|0))-+lfm1(+((k+1)|0))-+lfm1(+(n|0)))/Math.LN2)|0;
+  var x=0.,t=0.08106146679532733;
+  x=+((k+n)|0);
+  t+=(x-.5)*+Math.log(x)+1./(12.*x);
+  x=+((k+1)|0);
+  t-=(x-.5)*+Math.log(x)+1./(12.*x);
+  x=+(n|0);
+  t-=(x-.5)*+Math.log(x)+1./(12.*x);
+  return ~~+Math.ceil(t/Math.LN2)|0;
 }
 
 var last_dc = 0;
