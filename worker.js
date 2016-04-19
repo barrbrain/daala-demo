@@ -82,17 +82,29 @@ function lenDcDelta(x) {
   return i < 6 ? 3 + i : (i << 1) - 2;
 }
 
+function lfm1(x) /* ~= log(factorial(x-1)) */ {
+  x=+x;
+  return +((x-.5)*+Math.log(x)-x+.5*+Math.log(2.*Math.PI)+1./(12.*x));
+}
+
+function weakCompositionEntropy(k, n) /* ceil(log2(k+n-1 choose n-1)) */ {
+  k=k|0;
+  n=n|0;
+  return ~~+Math.ceil((+lfm1(+((k+n)|0))-+lfm1(+((k+1)|0))-+lfm1(+(n|0)))/Math.LN2)|0;
+}
+
 var last_dc = 0;
 var last_qg = 0;
 function bitrate(x, qg, k) {
   x = x | 0;
-  var i = 0, z = 0, K_n = 0, c = 0, E_run = 0, E_yn = 0, y = 0;
+  var i = 0, c = 0;
   c += lenDcDelta(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
-  c += lenDcDelta(qg-last_qg) // Gain
+  c += lenDcDelta(qg-last_qg) // Gain-delta
   last_qg = qg;
-  if (qg == 0) return c|0;
-  c = c + 63 * Math.log2(1 + Math.log(63 * 2) * k / 63)|0; // PVQ estimate
+  if (qg == 0) return c|0; // Skip
+  c += weakCompositionEntropy(k, 63); // Shape
+  for (i = 1; i < 64; i++) c += !!I4[x+i]; // Signs
   return c|0;
 }
 
