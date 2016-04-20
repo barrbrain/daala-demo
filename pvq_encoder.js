@@ -3,8 +3,10 @@ var pvq_encoder = (function(global,env,buffer) {
   
 var HEAP32 = new global.Int32Array(buffer);
 var HEAPF64 = new global.Float64Array(buffer);
+var LOG2E = global.Math.LOG2E;
 var Math_floor = global.Math.floor;
 var Math_imul = global.Math.imul;
+var Math_log = global.Math.log;
 var Math_sqrt = global.Math.sqrt;
 
 function _od_pvq_search_rdo_double(i21, i20, i16, i22, d3, i17) {
@@ -235,5 +237,26 @@ function _init_tables(i2) {
  return;
 }
 
-  return { od_pvq_search_rdo_double: _od_pvq_search_rdo_double, init_tables: _init_tables, od_rsqrt_table: _od_rsqrt_table, od_custom_rsqrt_dynamic_table: _od_custom_rsqrt_dynamic_table, od_fill_dynamic_rsqrt_table: _od_fill_dynamic_rsqrt_table };
+function _od_pvq_rate(i8, i5, i9, i10, i4, i2, i3, i6, i7) {
+ i8 = i8 | 0;
+ i5 = i5 | 0;
+ i9 = i9 | 0;
+ i10 = i10 | 0;
+ i4 = i4 | 0;
+ i2 = i2 | 0;
+ i3 = i3 | 0;
+ i6 = i6 | 0;
+ i7 = i7 | 0;
+ var d1 = 0.0;
+ d1 = +(i3 | 0);
+ d1 = d1 * (+Math_log(+(+(i2 | 0) * +Math_log(+(+(i3 << 1 | 0))) / d1 + 1.0)) * LOG2E);
+ if ((i8 | 0) > 0 & (i9 | 0) > -1) {
+  d1 = d1 + +Math_log(+(+(i10 | 0))) * LOG2E * .9;
+  d1 = (i6 | 0) != 0 & (i7 | 0) == 0 ? d1 + 6.0 : d1;
+  return +((i8 | 0) == (i5 | 0) ? d1 + -.5 : d1);
+ } else return +d1;
+ return 0.0;
+}
+
+  return { od_pvq_search_rdo_double: _od_pvq_search_rdo_double, init_tables: _init_tables, od_rsqrt_table: _od_rsqrt_table, od_custom_rsqrt_dynamic_table: _od_custom_rsqrt_dynamic_table, od_fill_dynamic_rsqrt_table: _od_fill_dynamic_rsqrt_table, od_pvq_rate: _od_pvq_rate };
 })(window, null, window.HEAP);

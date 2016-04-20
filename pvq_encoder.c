@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
 #define MAXN (64)
 #define OD_PVQ_LAMBDA (.147)
+#define OD_LOG2(x) (M_LOG2E*log(x))
 
 # if 0
-#define OD_PVQ_RATE_APPROX (0)
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the
    dot-product of the 1st band of chroma with the luma ref doesn't overflow.*/
 #define OD_CFL_FLIP_SHIFT (OD_LIMIT_BSIZE_MAX + 0)
@@ -226,32 +226,17 @@ int od_vector_is_null(const od_coeff *x, int len) {
   for (i = 0; i < len; i++) if (x[i]) return 0;
   return 1;
 }
+#endif
 
-static double od_pvq_rate(int qg, int icgr, int theta, int ts,
- const od_adapt_ctx *adapt, const od_coeff *y0, int k, int n,
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+double od_pvq_rate(int qg, int icgr, int theta, int ts,
+ const int *y0, int k, int n,
  int is_keyframe, int pli) {
   double rate;
-#if OD_PVQ_RATE_APPROX
   /* Estimates the number of bits it will cost to encode K pulses in
      N dimensions based on experimental data for bitrate vs K. */
   rate = n*OD_LOG2(1+log(n*2)*k/n);
-  OD_UNUSED(adapt);
-  OD_UNUSED(y0);
-  OD_UNUSED(bs);
-#else
-  if (k > 0){
-    od_ec_enc ec;
-    od_pvq_codeword_ctx cd;
-    int tell;
-    od_ec_enc_init(&ec, 1000);
-    OD_COPY(&cd, &adapt->pvq.pvq_codeword_ctx, 1);
-    tell = od_ec_enc_tell_frac(&ec);
-    od_encode_pvq_codeword(&ec, &cd, y0, n - (theta != -1), k);
-    rate = (od_ec_enc_tell_frac(&ec)-tell)/8.;
-    od_ec_enc_clear(&ec);
-  }
-  else rate = 0;
-#endif
   if (qg > 0 && theta >= 0) {
     /* Approximate cost of entropy-coding theta */
     rate += .9*OD_LOG2(ts);
@@ -265,6 +250,7 @@ static double od_pvq_rate(int qg, int icgr, int theta, int ts,
   return rate;
 }
 
+#if 0
 /** Perform PVQ quantization with prediction, trying several
  * possible gains and angles. See draft-valin-videocodec-pvq and
  * http://jmvalin.ca/slides/pvq.pdf for more details.
