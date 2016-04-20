@@ -1,9 +1,14 @@
 self.HEAP = new ArrayBuffer(128*1024*1024);
 self.I4 = new Int32Array(HEAP);
-self.tempptr = 0;
-self.imageptr = (8*8)<<2;
+self.block_buf = 0;
+self.pvq_in = self.block_buf + ((8*8)<<2);
+self.pvq_out = self.pvq_in + ((8*8)<<2);
+self.pvq_buf = self.pvq_out + ((8*8)<<2);
+self.imageptr = self.pvq_buf + ((16+4+64)<<3);
 
-importScripts('filter.js', 'dct.js', 'dering.js');
+importScripts('filter.js', 'dct.js', 'dering.js', 'pvq_encoder.js');
+
+pvq_encoder.init_tables(pvq_buf);
 
 function rgb2ycgco(inbuf, outbuf, pixels) {
   var y, cg, co;
@@ -129,90 +134,17 @@ function usq8x8(x, scale) {
   return bitcount|0;
 }
 
-const pvqbuf = new Float64Array(64);
-const pvqout = new Int32Array(64);
-const pvqin = new Int32Array(64);
-function pvq_search(k) {
- k = k | 0;
- var i = 0, xy = 0.0, j = 0, yy = 0.0, txy = 0.0, tyy = 0.0, bxy = 0.0, byy = 0.0, h = 0, better = 0;
- i = 0;
- do {
-  pvqbuf[i] = +Math.abs(+(+(pvqin[i] | 0)));
-  i = i + 1 | 0;
- } while ((i | 0) != 63);
- i = 0;
- xy = 0.0;
- do {
-  xy = xy + +pvqbuf[i];
-  i = i + 1 | 0;
- } while ((i | 0) != 63);
- txy = 1.0 / xy;
- tyy = +(k | 0);
- i = 0;
- j = 0;
- xy = 0.0;
- yy = 0.0;
- do {
-  byy = +pvqbuf[j];
-  h = ~~+Math.floor(+(txy * (tyy * byy)));
-  pvqout[j] = h;
-  xy = xy + byy * +(h | 0);
-  yy = yy + +(Math.imul(h, h) | 0);
-  i = h + i | 0;
-  j = j + 1 | 0;
- } while ((j | 0) != 63);
- if ((i | 0) < (k | 0)) while (1) {
-  bxy = -10.0;
-  byy = 1.0;
-  h = 0;
-  j = 0;
-  while (1) {
-   txy = xy + +pvqbuf[h];
-   tyy = yy + +(pvqout[h] << 1 | 0) + 1.0;
-   txy = txy * txy;
-   if (!h) better = 1; else if (byy * txy > bxy * tyy) better = 1; else {
-    txy = bxy;
-    tyy = byy;
-   }
-   if (better) {
-    better = 0;
-    j = h;
-   }
-   h = h + 1 | 0;
-   if ((h | 0) == 63) break; else {
-    bxy = txy;
-    byy = tyy;
-   }
-  }
-  xy = xy + +pvqbuf[j];
-  h = j;
-  j = pvqout[h] | 0;
-  pvqout[h] = j + 1;
-  i = i + 1 | 0;
-  if ((i | 0) == (k | 0)) {
-   i = 0;
-   break;
-  } else yy = yy + +(j << 1 | 0) + 1.0;
- } else i = 0;
- do {
-  if ((pvqin[i] | 0) < 0) {
-   pvqout[i] = 0 - (pvqout[i] | 0);
-  }
-  i = i + 1 | 0;
- } while ((i | 0) != 63);
- return;
-}
-
 function pvq8x8(x, scale, beta) {
   var total = 0, total_sq = 0, rounded = 0, target = 0;
   var i = 0, l = 0, v = 0;
   var dg = 1.;
   var bitcount = 0;
   var qg = 0, g = 0, k = 0;
+  var y = pvq_out>>2;
   for (k = 1; k < 64; k++) {
-    v = I4[x+k] * qm_inv[k] >> 12;
+    v = I4[x+zigzag[k]] * qm_inv[zigzag[k]] >> 12;
     total_sq += v * v;
-    pvqin[k - 1] = v;
+    I4[y+k] = v;
   }
   qg = ~~+Math.floor(.5+ 4096 * Math.pow(Math.sqrt(total_sq) / 4096, 1. / beta) / scale / beta);
   g = ~~+Math.floor(.5+ 4096 * Math.pow(qg * beta * scale / 4096, beta));
@@ -224,16 +156,16 @@ function pvq8x8(x, scale, beta) {
     return bitcount|0;
   }
   target = ~~+Math.floor(.5+ (qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
-  pvq_search(target);
-  for (k = 1; k < 64; k++) {
-    v = pvqout[k - 1]
-    rounded += v * v;
-    I4[x+k] = v;
-  }
+  pvq_encoder.od_pvq_search_rdo_double((y+1)<<2, 63, target, (x+1)<<2, g*g, pvq_buf);
   bitcount = bitrate(x, qg, target);
+  for (k = 1; k < 64; k++) {
+    v = I4[x+k];
+    rounded += v*v;
+    I4[y+zigzag[k]] = v;
+  }
   dg = g / Math.sqrt(rounded);
   for (k = 1; k < 64; k++) {
-    v = pvqout[k - 1];
+    v = I4[y+k];
     v = Math.round(v*dg)|0;
     I4[x+k] = v * qm[k] >> 11;
   }
@@ -244,7 +176,6 @@ function quantize(w, h, scale, method) {
   w = w | 0;
   h = h | 0;
   var i = 0, j = 0, p = imageptr>>2, v = 0, k = 0, l = 0, q = 0;
-  var buf = imageptr + ((w*h*3)<<2);
   var bitcount = 0;
   last_dc = 0;
   last_qg = 0;
@@ -252,9 +183,9 @@ function quantize(w, h, scale, method) {
   for (i = 0; i < h * 3; i += 8) {
     var beta = i < h ? config.beta : 1.;
     for (j = 0; j < w; j += 8) {
-      dct.od_bin_fdct8x8(buf, 8, (p + j) << 2, w, tempptr);
-      bitcount += method == 'pvq' ? pvq8x8(buf>>2, scale, beta) : usq8x8(buf>>2, scale);
-      dct.od_bin_idct8x8((p + j) << 2, w, buf, 8, tempptr);
+      dct.od_bin_fdct8x8(pvq_in, 8, (p + j) << 2, w, block_buf);
+      bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, beta) : usq8x8(pvq_in>>2, scale);
+      dct.od_bin_idct8x8((p + j) << 2, w, pvq_in, 8, block_buf);
     }
     p += 8 * w;
   }
@@ -287,11 +218,11 @@ function update_image() {
   var ts = new Date();
   if (config.lapping) {
     filter.lapvert(imageptr, w, h);
-    filter.laphorz(imageptr, w, h, tempptr);
+    filter.laphorz(imageptr, w, h, block_buf);
   }
   var bitcount = quantize(w, h, config.scale, config.method);
   if (config.lapping) {
-    filter.unlaphorz(imageptr, w, h, tempptr);
+    filter.unlaphorz(imageptr, w, h, block_buf);
     filter.unlapvert(imageptr, w, h);
   }
   if (config.strength > 0) {

@@ -93,7 +93,7 @@ that has been settled on in <a href="https://xiph.org/daala/">Daala</a>. It bala
 artifacts with less ringing than a full block transform.
 <p>For now, quantization is a single-band implementation of
 <a href="https://people.xiph.org/~jm/daala/pvq_demo/">Perceptual Vector Quantization</a>
-without frequency-domain prediction or rate-distortion optimization. The bitrate is estimated assuming
+without frequency-domain prediction. The bitrate is estimated assuming
 entropy coding of the PVQ codeword with less than one bit overhead per block.
 DC coefficents and companded gain are simply <a href="https://en.wikipedia.org/wiki/Delta_encoding">delta encoded</a>
 using the prefix scheme recommended for JPEG.
