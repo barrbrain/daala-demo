@@ -205,7 +205,6 @@ double od_pvq_search_rdo_double(const int *xcoeff, int n, int k,
   return xy/(1e-100 + sqrt(xx*yy));
 }
 
-#if 0
 /** Encodes the gain so that the return value increases with the
  * distance |x-ref|, so that we can encode a zero when x=ref. The
  * value x=0 is not covered because it is only allowed in the noref
@@ -215,12 +214,13 @@ double od_pvq_search_rdo_double(const int *xcoeff, int n, int k,
  * @param [in]      ref    quantized gain of the reference
  * @return                 interleave-encoded quantized gain value
  */
-static int neg_interleave(int x, int ref) {
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+int neg_interleave(int x, int ref) {
   if (x < ref) return -2*(x - ref) - 1;
   else if (x < 2*ref) return 2*(x - ref);
   else return x-1;
 }
-#endif
 
 EMSCRIPTEN_KEEPALIVE
 __attribute__((noinline))

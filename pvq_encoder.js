@@ -237,6 +237,23 @@ function _init_tables(i2) {
  return;
 }
 
+function _neg_interleave(i2, i1) {
+ i2 = i2 | 0;
+ i1 = i1 | 0;
+ if ((i2 | 0) < (i1 | 0)) {
+  i2 = (i1 - i2 << 1) + -1 | 0;
+  return i2 | 0;
+ }
+ if ((i1 << 1 | 0) > (i2 | 0)) {
+  i2 = i2 - i1 << 1;
+  return i2 | 0;
+ } else {
+  i2 = i2 + -1 | 0;
+  return i2 | 0;
+ }
+ return 0;
+}
+
 function _od_vector_is_null(i3, i2) {
  i3 = i3 | 0;
  i2 = i2 | 0;
@@ -279,5 +296,5 @@ function _od_pvq_rate(i8, i5, i9, i10, i4, i2, i3, i6, i7) {
  return 0.0;
 }
 
-  return { od_pvq_search_rdo_double: _od_pvq_search_rdo_double, init_tables: _init_tables, od_rsqrt_table: _od_rsqrt_table, od_custom_rsqrt_dynamic_table: _od_custom_rsqrt_dynamic_table, od_fill_dynamic_rsqrt_table: _od_fill_dynamic_rsqrt_table, od_vector_is_null: _od_vector_is_null, od_pvq_rate: _od_pvq_rate };
+  return { od_pvq_search_rdo_double: _od_pvq_search_rdo_double, init_tables: _init_tables, od_rsqrt_table: _od_rsqrt_table, od_custom_rsqrt_dynamic_table: _od_custom_rsqrt_dynamic_table, od_fill_dynamic_rsqrt_table: _od_fill_dynamic_rsqrt_table, neg_interleave: _neg_interleave, od_vector_is_null: _od_vector_is_null, od_pvq_rate: _od_pvq_rate };
 })(window, null, window.HEAP);
