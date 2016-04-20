@@ -32,9 +32,9 @@ function ycgco2rgb(inbuf, outbuf, pixels) {
     r = t + inbuf[i+2*pixels];
     g = inbuf[i] + inbuf[i+pixels];
     b = t - inbuf[i+2*pixels];
-    outbuf[i*4] = r >> 4;
-    outbuf[i*4+1] = g >> 4;
-    outbuf[i*4+2] = b >> 4;
+    outbuf[i*4] = (r+8) >> 4;
+    outbuf[i*4+1] = (g+8) >> 4;
+    outbuf[i*4+2] = (b+8) >> 4;
     outbuf[i*4+3] = 0xff;
     i = i+1;
   }
