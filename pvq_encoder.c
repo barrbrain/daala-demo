@@ -220,13 +220,15 @@ static int neg_interleave(int x, int ref) {
   else if (x < 2*ref) return 2*(x - ref);
   else return x-1;
 }
+#endif
 
-int od_vector_is_null(const od_coeff *x, int len) {
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+int od_vector_is_null(const int *x, int len) {
   int i;
   for (i = 0; i < len; i++) if (x[i]) return 0;
   return 1;
 }
-#endif
 
 EMSCRIPTEN_KEEPALIVE
 __attribute__((noinline))
