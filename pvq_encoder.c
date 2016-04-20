@@ -45,31 +45,46 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
 }
 #endif
 
+struct tables {
+ double small[16];
+ double custom[4];
+ double x[MAXN];
+};
+
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+void init_tables(struct tables *t) {
+  int i;
+  for (i = 1; i <= 16; i++)
+    t->small[i-1] = 1./sqrt(i);
+}
+
 /* Computes 1/sqrt(i) using a table for small values. */
-static double od_rsqrt_table(int i) {
-  static double table[16] = {
-    1.000000, 0.707107, 0.577350, 0.500000,
-    0.447214, 0.408248, 0.377964, 0.353553,
-    0.333333, 0.316228, 0.301511, 0.288675,
-    0.277350, 0.267261, 0.258199, 0.250000};
-  if (i <= 16) return table[i-1];
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+double od_rsqrt_table(struct tables *t, int i) {
+  if (i <= 16) return t->small[i-1];
   else return 1./sqrt(i);
 }
 
 /*Computes 1/sqrt(start+2*i+1) using a lookup table containing the results
    where 0 <= i < table_size.*/
-static double od_custom_rsqrt_dynamic_table(const double* table,
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+double od_custom_rsqrt_dynamic_table(struct tables *t,
  const int table_size, const double start, const int i) {
-  if (i < table_size) return table[i];
-  else return od_rsqrt_table(start + 2*i + 1);
+  if (i < table_size) return t->custom[i];
+  else return od_rsqrt_table(t, start + 2*i + 1);
 }
 
 /*Fills tables used in od_custom_rsqrt_dynamic_table for a given start.*/
-static void od_fill_dynamic_rsqrt_table(double *table, const int table_size,
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+void od_fill_dynamic_rsqrt_table(struct tables *t, const int table_size,
  const double start) {
   int i;
   for (i = 0; i < table_size; i++)
-    table[i] = od_rsqrt_table(start + 2*i + 1);
+    t->custom[i] = od_rsqrt_table(t, start + 2*i + 1);
 }
 
 /** Find the codepoint on the given PSphere closest to the desired
@@ -84,14 +99,14 @@ static void od_fill_dynamic_rsqrt_table(double *table, const int table_size,
  *                          gain units)
  * @return                  cosine distance between x and y (between 0 and 1)
  */
-static double pvq_search_rdo_double(const int *xcoeff, int n, int k,
- int *ypulse, double g2) {
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+double od_pvq_search_rdo_double(const int *xcoeff, int n, int k,
+ int *ypulse, double g2, struct tables *t) {
   int i, j;
   double xy;
   double yy;
-  /* TODO - This blows our 8kB stack space budget and should be fixed when
-   converting PVQ to fixed point. */
-  double x[MAXN];
+  double *x = t->x;
   double xx;
   double lambda;
   double norm_1;
@@ -119,7 +134,8 @@ static double pvq_search_rdo_double(const int *xcoeff, int n, int k,
     }
   }
   else {
-    for (j = 0; j < n; j++) ypulse[j] = 0;
+    volatile int *vypulse = ypulse;
+    for (j = 0; j < n; j++) vypulse[j] = 0;
   }
   /* Only use RDO on the last few pulses. This not only saves CPU, but using
      RDO on all pulses actually makes the results worse for reasons I don't
@@ -157,8 +173,7 @@ static double pvq_search_rdo_double(const int *xcoeff, int n, int k,
      lambda*rate term. Note that since x and y aren't normalized here,
      we need to divide by sqrt(x^2)*sqrt(y^2). */
   for (; i < k; i++) {
-    double rsqrt_table[4];
-    int rsqrt_table_size = 4;
+    int rsqrt_table_size = sizeof(t->custom)/sizeof(double);
     int pos;
     double best_cost;
     pos = 0;
@@ -166,13 +181,13 @@ static double pvq_search_rdo_double(const int *xcoeff, int n, int k,
     /*Fill the small rsqrt lookup table with inputs relative to yy.
       Specifically, the table of n values is filled with
        rsqrt(yy + 1), rsqrt(yy + 2 + 1) .. rsqrt(yy + 2*(n-1) + 1).*/
-    od_fill_dynamic_rsqrt_table(rsqrt_table, rsqrt_table_size, yy);
+    od_fill_dynamic_rsqrt_table(t, rsqrt_table_size, yy);
     for (j = 0; j < n; j++) {
       double tmp_xy;
       double tmp_yy;
       tmp_xy = xy + x[j];
       /*Calculate rsqrt(yy + 2*ypulse[j] + 1) using an optimized method.*/
-      tmp_yy = od_custom_rsqrt_dynamic_table(rsqrt_table, rsqrt_table_size,
+      tmp_yy = od_custom_rsqrt_dynamic_table(t, rsqrt_table_size,
        yy, ypulse[j]);
       tmp_xy = 2*tmp_xy*norm_1*tmp_yy - lambda*j*delta_rate;
       if (j == 0 || tmp_xy > best_cost) {
