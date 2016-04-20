@@ -22,20 +22,16 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
-#include "internal.h"
-#include "block_size.h"
-#include "entenc.h"
-#include "entcode.h"
-#include "filter.h"
-#include "pvq_encoder.h"
-#include "partition.h"
+#include <math.h>
 
+#include <emscripten.h>
+
+#define MAXN (64)
+#define OD_PVQ_LAMBDA (.147)
+
+# if 0
 #define OD_PVQ_RATE_APPROX (0)
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the
    dot-product of the 1st band of chroma with the luma ref doesn't overflow.*/
@@ -47,6 +43,7 @@ static void od_encode_pvq_codeword(od_ec_enc *ec, od_pvq_codeword_ctx *adapt,
   od_encode_band_pvq_splits(ec, adapt, in, n, k, 0);
   for (i = 0; i < n; i++) if (in[i]) od_ec_enc_bits(ec, in[i] < 0, 1);
 }
+#endif
 
 /* Computes 1/sqrt(i) using a table for small values. */
 static double od_rsqrt_table(int i) {
@@ -68,7 +65,7 @@ static double od_custom_rsqrt_dynamic_table(const double* table,
 }
 
 /*Fills tables used in od_custom_rsqrt_dynamic_table for a given start.*/
-static void od_fill_dynamic_rqrt_table(double *table, const int table_size,
+static void od_fill_dynamic_rsqrt_table(double *table, const int table_size,
  const double start) {
   int i;
   for (i = 0; i < table_size; i++)
@@ -87,8 +84,8 @@ static void od_fill_dynamic_rqrt_table(double *table, const int table_size,
  *                          gain units)
  * @return                  cosine distance between x and y (between 0 and 1)
  */
-static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
- od_coeff *ypulse, double g2) {
+static double pvq_search_rdo_double(const int *xcoeff, int n, int k,
+ int *ypulse, double g2) {
   int i, j;
   double xy;
   double yy;
@@ -102,7 +99,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
   double delta_rate;
   xx = xy = yy = 0;
   for (j = 0; j < n; j++) {
-    x[j] = fabs(xcoeff[j]);
+    x[j] = abs(xcoeff[j]);
     xx += x[j]*x[j];
   }
   norm_1 = 1./sqrt(1e-30 + xx);
@@ -113,9 +110,9 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     double l1_inv;
     l1_norm = 0;
     for (j = 0; j < n; j++) l1_norm += x[j];
-    l1_inv = 1./OD_MAXF(l1_norm, 1e-100);
+    l1_inv = 1./l1_norm;
     for (j = 0; j < n; j++) {
-      ypulse[j] = OD_MAXI(0, (int)floor(k*x[j]*l1_inv));
+      ypulse[j] = (int)floor(k*x[j]*l1_inv);
       xy += x[j]*ypulse[j];
       yy += ypulse[j]*ypulse[j];
       i += ypulse[j];
@@ -169,7 +166,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
     /*Fill the small rsqrt lookup table with inputs relative to yy.
       Specifically, the table of n values is filled with
        rsqrt(yy + 1), rsqrt(yy + 2 + 1) .. rsqrt(yy + 2*(n-1) + 1).*/
-    od_fill_dynamic_rqrt_table(rsqrt_table, rsqrt_table_size, yy);
+    od_fill_dynamic_rsqrt_table(rsqrt_table, rsqrt_table_size, yy);
     for (j = 0; j < n; j++) {
       double tmp_xy;
       double tmp_yy;
@@ -193,6 +190,7 @@ static double pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
   return xy/(1e-100 + sqrt(xx*yy));
 }
 
+#if 0
 /** Encodes the gain so that the return value increases with the
  * distance |x-ref|, so that we can encode a zero when x=ref. The
  * value x=0 is not covered because it is only allowed in the noref
@@ -847,3 +845,4 @@ int od_pvq_encode(daala_enc_ctx *enc,
   }
   return 0;
 }
+#endif
