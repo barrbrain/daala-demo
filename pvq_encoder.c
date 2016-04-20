@@ -29,8 +29,78 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <emscripten.h>
 
 #define MAXN (64)
+
+/* Normalized lambda for PVQ quantizer. Since we normalize the gain by q, the
+   distortion is normalized by q^2 and lambda does not need the q^2 factor.
+   At high rate, this would be log(2)/6, but we're using a slightly more
+   aggressive value, closer to:
+   Li, Xiang, et al. "Laplace distribution based Lagrangian rate distortion
+   optimization for hybrid video coding." Circuits and Systems for Video
+   Technology, IEEE Transactions on 19.2 (2009): 193-205.
+   */
 #define OD_PVQ_LAMBDA (.147)
+
+#define OD_PVQ_SKIP_ZERO 1
+#define OD_PVQ_SKIP_COPY 2
+
+/* Maximum size for coding a PVQ band. */
+#define OD_MAX_PVQ_SIZE (128)
+
 #define OD_LOG2(x) (M_LOG2E*log(x))
+
+#define OD_MINF(a, b) ((a) < (b) ? (a) : (b))
+#define OD_MAXF(a, b) ((a) > (b) ? (a) : (b))
+
+/*#define OD_MAXI(a, b) ((a) < (b) ? (b) : (a))*/
+# define OD_MAXI(a, b) ((a) ^ (((a) ^ (b)) & -((b) > (a))))
+/*#define OD_MINI(a, b) ((a) > (b) ? (b) : (a))*/
+# define OD_MINI(a, b) ((a) ^ (((b) ^ (a)) & -((b) < (a))))
+
+#define OD_QM_SHIFT (15)
+#define OD_QM_SCALE (1 << OD_QM_SHIFT)
+#define OD_QM_SCALE_1 (1./OD_QM_SCALE)
+
+#define OD_DISABLE_CFL (0)
+
+typedef int od_coeff;
+typedef int od_val16;
+typedef int od_val32;
+# define OD_ROUND16(x) (x)
+# define OD_ROUND32(x) (x)
+# define OD_SHL(x, shift) (x)
+# define OD_SHR(x, shift) (x)
+# define OD_SHR_ROUND(x, shift) (x)
+# define OD_ABS(x) (fabs(x))
+# define OD_MULT16_16(a, b) ((a)*(b))
+# define OD_MULT16_32_Q16(a, b) ((a)*(b))
+
+#define OD_THETA_SCALE (1)
+#define OD_TRIG_SCALE (1)
+#define OD_CGAIN_SCALE (1)
+#define OD_THETA_SCALE_1 (1./OD_THETA_SCALE)
+#define OD_TRIG_SCALE_1 (1./OD_TRIG_SCALE)
+#define OD_CGAIN_SCALE_1 (1./OD_CGAIN_SCALE)
+#define OD_CGAIN_SCALE_2 (OD_CGAIN_SCALE_1*OD_CGAIN_SCALE_1)
+
+extern void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
+                                  const od_val16 *r, int n,
+                                  int noref, od_val32 g,
+                                  od_val32 theta, int m, int s,
+                                  const short *qm_inv);
+extern od_val32 od_gain_expand(od_val32 cg, int q0, double beta);
+extern od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
+ double beta, int bshift);
+extern int od_compute_householder(od_val16 *r, int n, od_val32 gr, int *sign,
+ int shift);
+extern void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
+ int n);
+extern int od_pvq_compute_max_theta(od_val32 qcg, double beta);
+ od_val32 od_pvq_compute_theta(int t, int max_theta);
+extern int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref,
+ int n, double beta, int nodesync);
+
+#define od_pvq_sin(x) sin(x)
+#define od_pvq_cos(x) cos(x)
 
 # if 0
 /*Shift to ensure that the upper bound (i.e. for the max blocksize) of the
@@ -252,7 +322,6 @@ double od_pvq_rate(int qg, int icgr, int theta, int ts,
   return rate;
 }
 
-#if 0
 /** Perform PVQ quantization with prediction, trying several
  * possible gains and angles. See draft-valin-videocodec-pvq and
  * http://jmvalin.ca/slides/pvq.pdf for more details.
@@ -277,11 +346,14 @@ double od_pvq_rate(int qg, int icgr, int theta, int ts,
  * @param [in]     qm_inv    Inverse of QM with magnitude compensation
  * @return         gain      index of the quatized gain
 */
-static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
  int n, int q0, od_coeff *y, int *itheta, int *max_theta, int *vk,
  double beta, double *skip_diff, int robust, int is_keyframe, int pli,
- const od_adapt_ctx *adapt, const int16_t *qm,
- const int16_t *qm_inv) {
+ const short *qm,
+ const short *qm_inv,
+ struct tables *t) {
   od_val32 g;
   od_val32 gr;
   od_coeff y_tmp[MAXN];
@@ -320,32 +392,15 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   lambda = OD_PVQ_LAMBDA;
   /* Give more weight to gain error when calculating the total distortion. */
   gain_weight = 1.4;
-  OD_ASSERT(n > 1);
   corr = 0;
-#if !defined(OD_FLOAT_PVQ)
-  /* Shift needed to make x fit in 16 bits even after rotation.
-     This shift value is not normative (it can be changed without breaking
-     the bitstream) */
-  xshift = OD_MAXI(0, od_vector_log_mag(x0, n) - 15);
-  /* Shift needed to make the reference fit in 15 bits, so that the Householder
-     vector can fit in 16 bits.
-     This shift value *is* normative, and has to match the decoder. */
-  rshift = OD_MAXI(0, od_vector_log_mag(r0, n) - 14);
-#else
   xshift = 0;
   rshift = 0;
-#endif
   for (i = 0; i < n; i++) {
-#if defined(OD_FLOAT_PVQ)
     /*This is slightly different from the original float PVQ code,
        where the qm was applied in the accumulation in od_pvq_compute_gain and
        the vectors were od_coeffs, not od_val16 (i.e. double).*/
     x16[i] = x0[i]*(double)qm[i]*OD_QM_SCALE_1;
     r16[i] = r0[i]*(double)qm[i]*OD_QM_SCALE_1;
-#else
-    x16[i] = OD_SHR_ROUND(x0[i]*qm[i], OD_QM_SHIFT + xshift);
-    r16[i] = OD_SHR_ROUND(r0[i]*qm[i], OD_QM_SHIFT + rshift);
-#endif
     corr += OD_MULT16_16(x16[i], r16[i]);
   }
   cfl_enabled = is_keyframe && pli != 0 && !OD_DISABLE_CFL;
@@ -354,23 +409,20 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   if (cfl_enabled) cgr = OD_CGAIN_SCALE;
   /* gain_offset is meant to make sure one of the quantized gains has
      exactly the same gain as the reference. */
-#if defined(OD_FLOAT_PVQ)
   icgr = (int)floor(.5 + cgr);
-#else
-  icgr = OD_SHR_ROUND(cgr, OD_CGAIN_SHIFT);
-#endif
   gain_offset = cgr - OD_SHL(icgr, OD_CGAIN_SHIFT);
   /* Start search with null case: gain=0, no pulse. */
   qg = 0;
   dist = gain_weight*cg*cg*OD_CGAIN_SCALE_2;
   best_dist = dist;
-  best_cost = dist + lambda*od_pvq_rate(0, 0, -1, 0, adapt, NULL, 0, n,
+  best_cost = dist + lambda*od_pvq_rate(0, 0, -1, 0, NULL, 0, n,
    is_keyframe, pli);
   noref = 1;
   best_k = 0;
   *itheta = -1;
   *max_theta = 0;
-  OD_CLEAR(y, n);
+  /* OD_CLEAR(y, n); */
+  { volatile od_coeff *p = y; while (p < y + n) *p++ = 0; }
   best_qtheta = 0;
   m = 0;
   s = 1;
@@ -391,7 +443,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
        + scgr*(double)cg*(2 - 2*corr);
       best_dist *= OD_CGAIN_SCALE_2;
     }
-    best_cost = best_dist + lambda*od_pvq_rate(0, icgr, 0, 0, adapt, NULL,
+    best_cost = best_dist + lambda*od_pvq_rate(0, icgr, 0, 0, NULL,
      0, n, is_keyframe, pli);
     best_qtheta = 0;
     *itheta = 0;
@@ -432,15 +484,15 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
         /* PVQ search, using a gain of qcg*cg*sin(theta)*sin(qtheta) since
            that's the factor by which cos_dist is multiplied to get the
            distortion metric. */
-        cos_dist = pvq_search_rdo_double(xr, n - 1, k, y_tmp,
-         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2);
+        cos_dist = od_pvq_search_rdo_double(xr, n - 1, k, y_tmp,
+         qcg*(double)cg*sin_prod*OD_CGAIN_SCALE_2, t);
         /* See Jmspeex' Journal of Dubious Theoretical Results. */
         dist_theta = 2 - 2.*od_pvq_cos(theta - qtheta)*OD_TRIG_SCALE_1
          + sin_prod*(2 - 2*cos_dist);
         dist = gain_weight*(qcg - cg)*(qcg - cg) + qcg*(double)cg*dist_theta;
         dist *= OD_CGAIN_SCALE_2;
         /* Do approximate RDO. */
-        cost = dist + lambda*od_pvq_rate(i, icgr, j, ts, adapt, y_tmp, k, n,
+        cost = dist + lambda*od_pvq_rate(i, icgr, j, ts, y_tmp, k, n,
          is_keyframe, pli);
         if (cost < best_cost) {
           best_cost = cost;
@@ -451,7 +503,8 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
           *itheta = j;
           *max_theta = ts;
           noref = 0;
-          OD_COPY(y, y_tmp, n - 1);
+          /* OD_COPY(y, y_tmp, n - 1); */
+          { volatile od_coeff *p = y; int p_ = 0; while (p_ < n - 1) p[p_] = y_tmp[p_], p_++; }
         }
       }
     }
@@ -471,14 +524,14 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
       od_val32 qcg;
       qcg = OD_SHL(i, OD_CGAIN_SHIFT);
       k = od_pvq_compute_k(qcg, -1, -1, 1, n, beta, robust || is_keyframe);
-      cos_dist = pvq_search_rdo_double(x16, n, k, y_tmp,
-       qcg*(double)cg*OD_CGAIN_SCALE_2);
+      cos_dist = od_pvq_search_rdo_double(x16, n, k, y_tmp,
+       qcg*(double)cg*OD_CGAIN_SCALE_2, t);
       /* See Jmspeex' Journal of Dubious Theoretical Results. */
       dist = gain_weight*(qcg - cg)*(qcg - cg)
        + qcg*(double)cg*(2 - 2*cos_dist);
       dist *= OD_CGAIN_SCALE_2;
       /* Do approximate RDO. */
-      cost = dist + lambda*od_pvq_rate(i, 0, -1, 0, adapt, y_tmp, k, n,
+      cost = dist + lambda*od_pvq_rate(i, 0, -1, 0, y_tmp, k, n,
        is_keyframe, pli);
       if (cost <= best_cost) {
         best_cost = cost;
@@ -488,7 +541,8 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
         best_k = k;
         *itheta = -1;
         *max_theta = 0;
-        OD_COPY(y, y_tmp, n);
+        /* OD_COPY(y, y_tmp, n); */
+        { volatile od_coeff *p = y; int p_ = 0; while (p_ < n) p[p_] = y_tmp[p_], p_++; }
       }
     }
   }
@@ -506,8 +560,10 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   }
   /* Synthesize like the decoder would. */
   if (skip) {
-    if (skip == OD_PVQ_SKIP_COPY) OD_COPY(out, r0, n);
-    else OD_CLEAR(out, n);
+    if (skip == OD_PVQ_SKIP_COPY) /* OD_COPY(out, r0, n); */
+      { volatile od_coeff *p = out; int p_ = 0; while (p_ < n) p[p_] = r0[p_], p_++; }
+    else /* OD_CLEAR(out, n); */
+      { volatile od_coeff *p = out; while (p < out + n) *p++ = 0; }
   }
   else {
     if (noref) gain_offset = 0;
@@ -524,6 +580,7 @@ static int pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   else return noref ? qg - 1 : neg_interleave(qg + 1, icgr + 1);
 }
 
+#if 0
 /** Encodes a single vector of integers (eg, a partition within a
  *  coefficient block) using PVQ
  *
