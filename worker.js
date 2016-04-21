@@ -1,10 +1,11 @@
 self.HEAP = new ArrayBuffer(128*1024*1024);
 self.I4 = new Int32Array(HEAP);
+self.F8 = new Float64Array(HEAP);
 self.block_buf = 0;
 self.pvq_in = self.block_buf + ((8*8)<<2);
 self.pvq_out = self.pvq_in + ((8*8)<<2);
-self.pvq_buf = self.pvq_out + ((8*8)<<2);
-self.imageptr = self.pvq_buf + ((16+4+64)<<3);
+self.pvq_buf = self.pvq_out + ((8*8)<<3);
+self.imageptr = self.pvq_buf + 3000;
 
 importScripts('filter.js', 'dct.js', 'dering.js', 'pvq_encoder.js');
 
@@ -140,11 +141,11 @@ function pvq8x8(x, scale, beta) {
   var dg = 1.;
   var bitcount = 0;
   var qg = 0, g = 0, k = 0;
-  var y = pvq_out>>2;
+  var y = pvq_out>>3;
   for (k = 1; k < 64; k++) {
     v = I4[x+zigzag[k]] * qm_inv[zigzag[k]] >> 12;
     total_sq += v * v;
-    I4[y+k] = v;
+    F8[y+k] = v;
   }
   qg = ~~+Math.floor(.5+ 4096 * Math.pow(Math.sqrt(total_sq) / 4096, 1. / beta) / scale / beta);
   g = ~~+Math.floor(.5+ 4096 * Math.pow(qg * beta * scale / 4096, beta));
@@ -156,16 +157,16 @@ function pvq8x8(x, scale, beta) {
     return bitcount|0;
   }
   target = ~~+Math.floor(.5+ (qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
-  pvq_encoder.od_pvq_search_rdo_double((y+1)<<2, 63, target, (x+1)<<2, g*g, pvq_buf);
+  pvq_encoder.od_pvq_search_rdo_double((y+1)<<3, 63, target, (x+1)<<2, g*g, pvq_buf);
   bitcount = bitrate(x, qg, target);
   for (k = 1; k < 64; k++) {
     v = I4[x+k];
     rounded += v*v;
-    I4[y+zigzag[k]] = v;
+    F8[y+zigzag[k]] = v;
   }
   dg = g / Math.sqrt(rounded);
   for (k = 1; k < 64; k++) {
-    v = I4[y+k];
+    v = F8[y+k];
     v = Math.round(v*dg)|0;
     I4[x+k] = v * qm[k] >> 11;
   }
