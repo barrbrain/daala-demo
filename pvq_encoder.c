@@ -63,8 +63,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #define OD_DISABLE_CFL (0)
 
 typedef int od_coeff;
-typedef int od_val16;
-typedef int od_val32;
+typedef double od_val16;
+typedef double od_val32;
 # define OD_ROUND16(x) (x)
 # define OD_ROUND32(x) (x)
 # define OD_SHL(x, shift) (x)
@@ -171,8 +171,8 @@ void od_fill_dynamic_rsqrt_table(struct tables *t, const int table_size,
  */
 EMSCRIPTEN_KEEPALIVE
 __attribute__((noinline))
-double od_pvq_search_rdo_double(const int *xcoeff, int n, int k,
- int *ypulse, double g2, struct tables *t) {
+double od_pvq_search_rdo_double(const od_val16 *xcoeff, int n, int k,
+ od_coeff *ypulse, double g2, struct tables *t) {
   int i, j;
   double xy;
   double yy;
@@ -184,7 +184,7 @@ double od_pvq_search_rdo_double(const int *xcoeff, int n, int k,
   double delta_rate;
   xx = xy = yy = 0;
   for (j = 0; j < n; j++) {
-    x[j] = abs(xcoeff[j]);
+    x[j] = OD_ABS(xcoeff[j]);
     xx += x[j]*x[j];
   }
   norm_1 = 1./sqrt(1e-30 + xx);
