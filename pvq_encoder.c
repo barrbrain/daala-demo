@@ -119,6 +119,13 @@ struct tables {
  double small[16];
  double custom[4];
  double x[MAXN];
+ od_val16 x16[MAXN];
+ od_val16 r16[MAXN];
+ od_val16 xr[MAXN];
+ od_val32 g;
+ od_val32 gr;
+ od_coeff y_tmp[MAXN];
+ int s;
 };
 
 EMSCRIPTEN_KEEPALIVE
@@ -354,9 +361,9 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
  const short *qm,
  const short *qm_inv,
  struct tables *t) {
-  od_val32 g;
-  od_val32 gr;
-  od_coeff y_tmp[MAXN];
+  od_val32 *g = &t->g;
+  od_val32 *gr = &t->gr;
+  od_coeff *y_tmp = t->y_tmp;
   int i;
   /* Number of pulses. */
   int k;
@@ -371,7 +378,7 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   double best_dist;
   double dist;
   /* Sign of Householder reflection. */
-  int s;
+  int *s = &t->s;
   /* Dimension on which Householder reflects. */
   int m;
   od_val32 theta;
@@ -385,8 +392,8 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   int cfl_enabled;
   int skip;
   double gain_weight;
-  od_val16 x16[MAXN];
-  od_val16 r16[MAXN];
+  od_val16 *x16 = t->x16;
+  od_val16 *r16 = t->r16;
   int xshift;
   int rshift;
   lambda = OD_PVQ_LAMBDA;
@@ -404,8 +411,8 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
     corr += OD_MULT16_16(x16[i], r16[i]);
   }
   cfl_enabled = is_keyframe && pli != 0 && !OD_DISABLE_CFL;
-  cg  = od_pvq_compute_gain(x16, n, q0, &g, beta, xshift);
-  cgr = od_pvq_compute_gain(r16, n, q0, &gr, beta, rshift);
+  cg  = od_pvq_compute_gain(x16, n, q0, g, beta, xshift);
+  cgr = od_pvq_compute_gain(r16, n, q0, gr, beta, rshift);
   if (cfl_enabled) cgr = OD_CGAIN_SCALE;
   /* gain_offset is meant to make sure one of the quantized gains has
      exactly the same gain as the reference. */
@@ -425,8 +432,8 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   { volatile od_coeff *p = y; while (p < y + n) *p++ = 0; }
   best_qtheta = 0;
   m = 0;
-  s = 1;
-  corr = corr/(1e-100 + g*(double)gr/OD_SHL(1, xshift + rshift));
+  *s = 1;
+  corr = corr/(1e-100 + (*g)*(double)(*gr)/OD_SHL(1, xshift + rshift));
   corr = OD_MAXF(OD_MINF(corr, 1.), -1.);
   if (is_keyframe) skip_dist = gain_weight*cg*cg*OD_CGAIN_SCALE_2;
   else {
@@ -451,12 +458,12 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
     noref = 0;
   }
   if (n <= OD_MAX_PVQ_SIZE && !od_vector_is_null(r0, n) && corr > 0) {
-    od_val16 xr[MAXN];
+    od_val16 *xr = t->xr;
     int gain_bound;
     gain_bound = OD_SHR(cg - gain_offset, OD_CGAIN_SHIFT);
     /* Perform theta search only if prediction is useful. */
     theta = OD_ROUND32(OD_THETA_SCALE*acos(corr));
-    m = od_compute_householder(r16, n, gr, &s, rshift);
+    m = od_compute_householder(r16, n, *gr, s, rshift);
     od_apply_householder(xr, x16, r16, n);
     for (i = m; i < n - 1; i++) xr[i] = xr[i + 1];
     /* Search for the best gain within a reasonable range. */
@@ -567,8 +574,8 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
   }
   else {
     if (noref) gain_offset = 0;
-    g = od_gain_expand(OD_SHL(qg, OD_CGAIN_SHIFT) + gain_offset, q0, beta);
-    od_pvq_synthesis_partial(out, y, r16, n, noref, g, theta, m, s,
+    *g = od_gain_expand(OD_SHL(qg, OD_CGAIN_SHIFT) + gain_offset, q0, beta);
+    od_pvq_synthesis_partial(out, y, r16, n, noref, *g, theta, m, *s,
      qm_inv);
   }
   *vk = k;
