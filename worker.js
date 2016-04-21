@@ -1,15 +1,18 @@
 self.HEAP = new ArrayBuffer(128*1024*1024);
 self.I4 = new Int32Array(HEAP);
+self.I2 = new Int16Array(HEAP);
 self.F8 = new Float64Array(HEAP);
 self.block_buf = 0;
 self.pvq_in = self.block_buf + ((8*8)<<2);
 self.pvq_out = self.pvq_in + ((8*8)<<2);
-self.pvq_buf = self.pvq_out + ((8*8)<<3);
-self.imageptr = self.pvq_buf + 3000;
+self.pvq_buf = self.pvq_out + ((8*8)<<2);
+self.qm_ptr = self.pvq_buf + 3000;
+self.qm_inv_ptr = self.qm_ptr + (64<<1);
+self.pvq_theta_out = self.qm_inv_ptr + (64<<1);
+self.imageptr = self.pvq_theta_out + 24+(64<<2)+(64<<2);
 
 importScripts('filter.js', 'dct.js', 'dering.js', 'pvq_encoder.js');
 
-pvq_encoder.init_tables(pvq_buf);
 
 function rgb2ycgco(inbuf, outbuf, pixels) {
   var y, cg, co;
@@ -56,21 +59,7 @@ var M4 = [
 32, 31, 33, 37, 43, 50, 58, 68,
 36, 35, 38, 42, 49, 58, 68, 78];
 
-var qm = new Int16Array(64);
-var qm_inv = new Int16Array(64);
-function init_qm() {
-  var i = 0, j = 0;
-  for (i = 0; i < 8; i++) {
-    for (j = 0; j < 8; j++) {
-      qm[i * 8 + j] = Math.floor(.5+ (1 << 15) * (config.lapping ? MAG8[i] * MAG8[j] : 1.) / M4[i * 8 + j]);
-      qm_inv[i * 8 + j] = Math.floor(.5+ (1 << 23) / qm[i * 8 + j]);
-    }
-  }
-  qm[0] = 1 << 11;
-  qm_inv[0] = 1 << 12;
-}
-
-var zigzag = [
+var zigzag = new Int8Array([
  0,  1,  8,  9,  2, 16, 10,  3,
 17, 24, 11, 25, 18, 19, 26, 27,
 32, 40, 33, 48, 41, 56, 49, 57,
@@ -78,7 +67,25 @@ var zigzag = [
 20, 34, 21, 28, 35, 42, 29, 22,
 36, 43, 23, 50, 30, 37, 58, 44,
 51, 31, 45, 59, 38, 52, 39, 46,
-60, 53, 47, 61, 54, 55, 62, 63];
+60, 53, 47, 61, 54, 55, 62, 63]);
+
+var qm = I2.subarray(qm_ptr>>1,(qm_ptr>>1)+64);
+var qm_inv = I2.subarray(qm_inv_ptr>>1,(qm_inv_ptr>>1)+64);
+var zigzag_inv = new Int8Array(64);
+function init_qm() {
+  var i = 0, j = 0;
+  for (i = 0; i < 64; i++) {
+    zigzag_inv[zigzag[i]] = i;
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      qm[zigzag_inv[i * 8 + j]] = Math.floor(.5+ (1 << 19) * (config.lapping ? MAG8[i] * MAG8[j] : 1.) / M4[i * 8 + j]);
+      qm_inv[zigzag_inv[i * 8 + j]] = Math.floor(.5+ (1 << 27) / qm[zigzag_inv[i * 8 + j]]);
+    }
+  }
+  qm[0] = 1 << 15;
+  qm_inv[0] = 1 << 12;
+}
 
 function lenDcDelta(x) {
   x = x | 0;
@@ -109,7 +116,7 @@ function bitrate(x, qg, k) {
   var i = 0, c = 0;
   c += lenDcDelta(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
-  c += lenDcDelta(qg-last_qg) // Gain-delta
+  c += lenDcDelta(qg-last_qg); // Gain-delta
   last_qg = qg;
   if (qg == 0) return c|0; // Skip
   c += weakCompositionEntropy(k, 63); // Shape
@@ -123,52 +130,55 @@ function usq8x8(x, scale) {
   var total = 0;
   var scale_inv = Math.floor(.5+ (1 << 16) / scale)|0;
   for (k = 1; k < 64; k++) {
-    v = Math.round(I4[x+k] * qm_inv[k] * scale_inv / (1 << 28));
+    v = Math.round(I4[x+k] * qm_inv[zigzag_inv[k]] * scale_inv / (1 << 28));
     total += Math.abs(v);
     I4[x+k] = v;
   }
-  bitcount = bitrate(x, total, total);
+  bitcount += bitrate(x, total, total);
   for (k = 1; k < 64; k++) {
     v = I4[x+k];
-    I4[x+k] = v * qm[k] * scale >> 11;
+    I4[x+k] = v * qm[zigzag_inv[k]] * scale >> 15;
   }
   return bitcount|0;
 }
 
-function pvq8x8(x, scale, beta) {
-  var total = 0, total_sq = 0, rounded = 0, target = 0;
-  var i = 0, l = 0, v = 0;
-  var dg = 1.;
-  var bitcount = 0;
-  var qg = 0, g = 0, k = 0;
-  var y = pvq_out>>3;
-  for (k = 1; k < 64; k++) {
-    v = I4[x+zigzag[k]] * qm_inv[zigzag[k]] >> 12;
-    total_sq += v * v;
-    F8[y+k] = v;
-  }
-  qg = ~~+Math.floor(.5+ 4096 * Math.pow(Math.sqrt(total_sq) / 4096, 1. / beta) / scale / beta);
-  g = ~~+Math.floor(.5+ 4096 * Math.pow(qg * beta * scale / 4096, beta));
-  if (qg == 0) {
-    for (k = 1; k < 64; k++) {
-      I4[x+k] = 0;
+function pvq8x8(x, scale, beta, pli) {
+  var bitcount = 0, k = 0, v = 0;
+  var robust = 1, keyframe = 1;
+  var q0 = Math.round(scale / beta)|0;
+  var y = pvq_out>>2;
+  var skip_diff = pvq_theta_out;
+  var itheta = pvq_theta_out + 8;
+  var max_theta = pvq_theta_out + 12;
+  var vk = pvq_theta_out + 16;
+  var r0 = pvq_theta_out + 24;
+  var y_pulse = pvq_theta_out+24+(64<<2);
+  F8[skip_diff>>3] = 0.;
+  if (pli == 0) {
+    for (k = 0; k < 64; k++) {
+      I4[(r0>>2)+k] = 0;
     }
-    bitcount = bitrate(x, qg, qg);
-    return bitcount|0;
   }
-  target = ~~+Math.floor(.5+ (qg - (1 - 3 / Math.sqrt(33))) * Math.sqrt(33));
-  pvq_encoder.od_pvq_search_rdo_double((y+1)<<3, 63, target, (x+1)<<2, g*g, pvq_buf);
-  bitcount = bitrate(x, qg, target);
-  for (k = 1; k < 64; k++) {
-    v = I4[x+k];
-    rounded += v*v;
-    F8[y+zigzag[k]] = v;
+  if (pli == 1) {
+    for (k = 0; k < 64; k++) {
+      I4[(r0>>2)+k] = I4[y+k];
+    }
   }
-  dg = g / Math.sqrt(rounded);
+  for (k = 0; k < 64; k++) {
+    I4[y+k] = I4[x+zigzag[k]];
+  }
   for (k = 1; k < 64; k++) {
-    v = F8[y+k];
-    v = Math.round(v*dg)|0;
-    I4[x+k] = v * qm[k] >> 11;
+    v = I4[y+k];
+    I4[x+k] = v;
+  }
+  var cg = pvq_encoder.od_pvq_theta((y+1)<<2, (x+1)<<2, r0+4,
+    63, q0, y_pulse, itheta, max_theta, vk,
+    beta, skip_diff, robust, keyframe, pli,
+    qm_ptr + 2, qm_inv_ptr + 2, pvq_buf);
+  bitcount += bitrate(y, cg, I4[vk>>2]);
+  for (k = 1; k < 64; k++) {
+    v = I4[y+k];
+    I4[x+zigzag[k]] = v;
   }
   return bitcount|0;
 }
@@ -176,17 +186,17 @@ function pvq8x8(x, scale, beta) {
 function quantize(w, h, scale, method) {
   w = w | 0;
   h = h | 0;
-  var i = 0, j = 0, p = imageptr>>2, v = 0, k = 0, l = 0, q = 0;
+  var i = 0, j = 0, p = imageptr>>2, pli = 0;
   var bitcount = 0;
   last_dc = 0;
   last_qg = 0;
-  init_qm();
-  for (i = 0; i < h * 3; i += 8) {
-    var beta = i < h ? config.beta : 1.;
+  for (i = 0; i < h; i += 8) {
     for (j = 0; j < w; j += 8) {
-      dct.od_bin_fdct8x8(pvq_in, 8, (p + j) << 2, w, block_buf);
-      bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, beta) : usq8x8(pvq_in>>2, scale);
-      dct.od_bin_idct8x8((p + j) << 2, w, pvq_in, 8, block_buf);
+      for (pli = 0; pli < 3; pli++) {
+        dct.od_bin_fdct8x8(pvq_in, 8, (pli*w*h + p + j) << 2, w, block_buf);
+        bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, config.beta, pli) : usq8x8(pvq_in>>2, scale);
+        dct.od_bin_idct8x8((pli*w*h + p + j) << 2, w, pvq_in, 8, block_buf);
+      }
     }
     p += 8 * w;
   }
@@ -216,6 +226,9 @@ function update_image() {
   var w = imagedata.width;
   var h = imagedata.height;
   rgb2ycgco(imagedata.data, imagebuffer, w*h);
+  I4.fill(0,0,self.imageptr>>2);
+  pvq_encoder.init_tables(self.pvq_buf);
+  init_qm();
   var ts = new Date();
   if (config.lapping) {
     filter.lapvert(imageptr, w, h);
