@@ -22,6 +22,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
+#if 0
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -446,6 +447,7 @@ int od_vector_log_mag(const od_coeff *x, int n) {
   return 8 + 1 + OD_ILOG(n + sum)/2;
 }
 #endif
+#endif
 
 /** Computes Householder reflection that aligns the reference r to the
  *  dimension in r with the greatest absolute value. The reflection
@@ -511,6 +513,7 @@ void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
   }
 }
 
+#if 0
 /** Gain companding: raises gain to the power 1/beta for activity masking.
  *
  * @param [in]  g     real (uncompanded) gain
@@ -556,6 +559,7 @@ static int32_t od_sqrt(int32_t x, int *sqrt_shift)
   *sqrt_shift = OD_SQRT_OUTSHIFT - ((s + OD_SQRT_INSHIFT) >> 1);
   return od_sqrt_norm(t);
 }
+#endif
 #endif
 
 /** Gain expanding: raises gain to the power beta for activity masking.
@@ -696,6 +700,7 @@ int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref, int n,
   }
 }
 
+#if 0
 #if !defined(OD_FLOAT_PVQ)
 #define OD_RSQRT_INSHIFT 16
 #define OD_RSQRT_OUTSHIFT 14
@@ -748,6 +753,7 @@ static int16_t od_rsqrt(int32_t x, int *rsqrt_shift)
    *rsqrt_shift = OD_RSQRT_OUTSHIFT + ((s + OD_RSQRT_INSHIFT) >> 1);
    return od_rsqrt_norm(t);
 }
+#endif
 #endif
 
 /** Synthesizes one parition of coefficient values from a PVQ-encoded
