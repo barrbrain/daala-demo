@@ -1,60 +1,373 @@
 var pvq_encoder = (function(global,env,buffer) {
 'use asm';
   
+var HEAP16 = new global.Int16Array(buffer);
 var HEAP32 = new global.Int32Array(buffer);
 var HEAPF64 = new global.Float64Array(buffer);
-var LOG2E = global.Math.LOG2E;
-var Math_floor = global.Math.floor;
-var Math_imul = global.Math.imul;
-var Math_log = global.Math.log;
-var Math_sqrt = global.Math.sqrt;
 
-function _od_pvq_search_rdo_double(i21, i20, i16, i22, d3, i17) {
- i21 = i21 | 0;
+var Math_floor=global.Math.floor;
+var Math_abs=global.Math.abs;
+var Math_sqrt=global.Math.sqrt;
+var Math_cos=global.Math.cos;
+var Math_sin=global.Math.sin;
+var Math_acos=global.Math.acos;
+var Math_log=global.Math.log;
+var Math_ceil=global.Math.ceil;
+var Math_imul=global.Math.imul;
+
+function _od_pvq_theta(i1, i5, i52, i51, i47, i49, i42, i34, i54, d46, i53, i29, i41, i35, i4, i48, i36) {
+ i1 = i1 | 0;
+ i5 = i5 | 0;
+ i52 = i52 | 0;
+ i51 = i51 | 0;
+ i47 = i47 | 0;
+ i49 = i49 | 0;
+ i42 = i42 | 0;
+ i34 = i34 | 0;
+ i54 = i54 | 0;
+ d46 = +d46;
+ i53 = i53 | 0;
+ i29 = i29 | 0;
+ i41 = i41 | 0;
+ i35 = i35 | 0;
+ i4 = i4 | 0;
+ i48 = i48 | 0;
+ i36 = i36 | 0;
+ var i2 = 0, d3 = 0.0, i6 = 0, d7 = 0.0, i8 = 0, d9 = 0.0, d10 = 0.0, d11 = 0.0, i12 = 0, d13 = 0.0, d14 = 0.0, i15 = 0, i16 = 0, d17 = 0.0, d18 = 0.0, d19 = 0.0, i20 = 0, i21 = 0, d22 = 0.0, i23 = 0, i24 = 0, i25 = 0, i26 = 0, d27 = 0.0, d28 = 0.0, d30 = 0.0, d31 = 0.0, i32 = 0, i33 = 0, i37 = 0, d38 = 0.0, i39 = 0, i40 = 0, i43 = 0, i44 = 0, i45 = 0, i50 = 0;
+ i43 = i36 + 2208 | 0;
+ i6 = i36 + 2216 | 0;
+ i32 = i36 + 2224 | 0;
+ i44 = i36 + 2480 | 0;
+ i33 = i36 + 672 | 0;
+ i45 = i36 + 1184 | 0;
+ i50 = (i51 | 0) > 0;
+ if (i50) {
+  d3 = 0.0;
+  i2 = 0;
+  do {
+   d38 = +(HEAP16[i4 + (i2 << 1) >> 1] | 0);
+   d31 = +(HEAP32[i5 + (i2 << 2) >> 2] | 0) * d38 * .000030517578125;
+   HEAPF64[i36 + 672 + (i2 << 3) >> 3] = d31;
+   d38 = +(HEAP32[i52 + (i2 << 2) >> 2] | 0) * d38 * .000030517578125;
+   HEAPF64[i36 + 1184 + (i2 << 3) >> 3] = d38;
+   d3 = d3 + d31 * d38;
+   i2 = i2 + 1 | 0;
+  } while ((i2 | 0) != (i51 | 0));
+ } else d3 = 0.0;
+ i39 = (i41 | 0) != 0;
+ i37 = i39 & (i35 | 0) != 0;
+ d30 = +_od_pvq_compute_gain(i33 | 0, i51 | 0, i47 | 0, i43 | 0, +d46, 0);
+ d13 = +_od_pvq_compute_gain(i45 | 0, i51 | 0, i47 | 0, i6 | 0, +d46, 0);
+ d13 = i37 ? 1.0 : d13;
+ i40 = ~~+Math_floor(+(d13 + .5));
+ d38 = d13 - +(i40 | 0);
+ d11 = d30 * (d30 * 1.4);
+ d7 = d11 + +_od_pvq_rate(0, 0, -1, 0, 0, 0, i51, i41, i35) * .147;
+ HEAP32[i42 >> 2] = -1;
+ HEAP32[i34 >> 2] = 0;
+ i2 = i49 + (i51 << 2) | 0;
+ if (i50) {
+  i4 = i49;
+  do {
+   HEAP32[i4 >> 2] = 0;
+   i4 = i4 + 4 | 0;
+  } while (i4 >>> 0 < i2 >>> 0);
+ }
+ HEAP32[i44 >> 2] = 1;
+ d14 = +HEAPF64[i6 >> 3];
+ d28 = d3 / (+HEAPF64[i43 >> 3] * d14 + 1.0e-100);
+ d28 = d28 < 1.0 ? d28 : 1.0;
+ d28 = d28 > -1.0 ? d28 : -1.0;
+ if (i39) {
+  d3 = d11;
+  i5 = 1;
+  d31 = d11;
+ } else {
+  d9 = d30 - d13;
+  d10 = 2.0 - d28 * 2.0;
+  d3 = d38 < 0.0 ? 0.0 : d38;
+  if (!i40) {
+   d31 = d30 - d3;
+   d3 = d31 * (d31 * 1.4) + d30 * d3 * d10;
+  } else d3 = d11;
+  d7 = d3 + +_od_pvq_rate(0, i40, 0, 0, 0, 0, i51, 0, i35) * .147;
+  HEAP32[i42 >> 2] = 0;
+  HEAP32[i34 >> 2] = 0;
+  i5 = 0;
+  d31 = d9 * (d9 * 1.4) + d30 * d13 * d10;
+ }
+ L15 : do if ((i51 | 0) < 129) {
+  if (d28 > 0.0 & (_od_vector_is_null(i52, i51) | 0) == 0) {
+   i26 = i36 + 1696 | 0;
+   i4 = ~~(d30 - d38);
+   d27 = +Math_acos(+d28);
+   i8 = _od_compute_householder(i45 | 0, i51 | 0, +d14, i44 | 0, 0) | 0;
+   _od_apply_householder(i26 | 0, i33 | 0, i45 | 0, i51 | 0);
+   i25 = i51 + -1 | 0;
+   if ((i8 | 0) < (i25 | 0)) {
+    i2 = i8;
+    do {
+     i24 = i2;
+     i2 = i2 + 1 | 0;
+     HEAPF64[i36 + 1696 + (i24 << 3) >> 3] = +HEAPF64[i36 + 1696 + (i2 << 3) >> 3];
+    } while ((i2 | 0) != (i25 | 0));
+   }
+   i6 = i4 + -1 | 0;
+   i6 = (i6 | 0) > 1 ? i6 : 1;
+   i21 = i4 + 1 | 0;
+   if ((i6 | 0) > (i21 | 0)) {
+    i2 = 0;
+    d11 = 0.0;
+    i6 = 0;
+   } else {
+    d22 = d27 * 2.0 / 3.141592653589793;
+    i23 = (i41 | i29 | 0) != 0 & 1;
+    i24 = (i51 | 0) > 1;
+    i2 = 0;
+    d9 = 0.0;
+    i20 = i6;
+    i6 = 0;
+    while (1) {
+     d19 = d38 + +(i20 | 0);
+     i16 = _od_pvq_compute_max_theta(+d19, +d46) | 0;
+     d18 = d22 * +(i16 | 0);
+     i4 = ~~+Math_floor(+(d18 + .5));
+     i4 = (i4 | 0) > 2 ? i4 + -2 | 0 : 0;
+     i15 = i16 + -1 | 0;
+     i12 = ~~+Math_ceil(+d18);
+     i15 = ((i12 | 0) < (i15 | 0) ? i12 ^ i15 : 0) ^ i15;
+     if ((i4 | 0) <= (i15 | 0)) {
+      d14 = +Math_sin(+d27);
+      d17 = d30 * d19;
+      d18 = d19 - d30;
+      d18 = d18 * (d18 * 1.4);
+      d13 = d7;
+      d11 = d3;
+      while (1) {
+       d10 = +_od_pvq_compute_theta(i4 | 0, i16 | 0);
+       i12 = _od_pvq_compute_k(+d19, i4 | 0, +d10, 0, i51 | 0, +d46, i23 | 0) | 0;
+       d3 = d14 * +Math_sin(+d10);
+       d3 = d18 + d17 * (2.0 - +Math_cos(+(d27 - d10)) * 2.0 + d3 * (2.0 - +_od_pvq_search_rdo_double(i26, i25, i12, i32, d17 * d3, i36) * 2.0));
+       d7 = +_od_pvq_rate(i20, i40, i4, i16, 0, i12, i51, i41, i35) * .147 + d3;
+       if (d7 < d13) {
+        HEAP32[i42 >> 2] = i4;
+        HEAP32[i34 >> 2] = i16;
+        if (i24) {
+         i2 = 0;
+         do {
+          HEAP32[i49 + (i2 << 2) >> 2] = HEAP32[i36 + 2224 + (i2 << 2) >> 2];
+          i2 = i2 + 1 | 0;
+         } while ((i2 | 0) != (i25 | 0));
+         i2 = i12;
+         d9 = d10;
+         i5 = 0;
+         i6 = i20;
+        } else {
+         i2 = i12;
+         d9 = d10;
+         i5 = 0;
+         i6 = i20;
+        }
+       } else {
+        d7 = d13;
+        d3 = d11;
+       }
+       if ((i4 | 0) < (i15 | 0)) {
+        d13 = d7;
+        d11 = d3;
+        i4 = i4 + 1 | 0;
+       } else break;
+      }
+     }
+     if ((i20 | 0) < (i21 | 0)) i20 = i20 + 1 | 0; else {
+      d11 = d9;
+      break;
+     }
+    }
+   }
+  } else {
+   i2 = 0;
+   d11 = 0.0;
+   i8 = 0;
+   i6 = 0;
+  }
+  if (d30 < 2.0 | (i39 & (i35 | 0) == 0 | d28 < .5)) {
+   i16 = ~~d30;
+   i4 = (i16 | 0) > 1 ? i16 : 1;
+   i16 = i16 + 1 | 0;
+   if ((i4 | 0) > (i16 | 0)) {
+    i12 = i2;
+    d7 = d11;
+   } else {
+    i15 = (i41 | i29 | 0) != 0 & 1;
+    if (i50) {
+     d10 = d3;
+     i12 = i4;
+    } else {
+     i12 = i2;
+     while (1) {
+      d9 = +(i4 | 0);
+      i2 = _od_pvq_compute_k(+d9, -1, -1.0, 1, i51 | 0, +d46, i15 | 0) | 0;
+      d10 = d30 * d9;
+      d9 = d9 - d30;
+      d10 = d9 * (d9 * 1.4) + d10 * (2.0 - +_od_pvq_search_rdo_double(i33, i51, i2, i32, d10, i36) * 2.0);
+      d9 = +_od_pvq_rate(i4, 0, -1, 0, 0, i2, i51, i41, i35) * .147 + d10;
+      if (!(d9 <= d7)) i2 = i12; else {
+       HEAP32[i42 >> 2] = -1;
+       HEAP32[i34 >> 2] = 0;
+       d7 = d9;
+       d3 = d10;
+       i5 = 1;
+       i6 = i4;
+      }
+      if ((i4 | 0) < (i16 | 0)) {
+       i12 = i2;
+       i4 = i4 + 1 | 0;
+      } else {
+       i12 = i2;
+       d7 = d11;
+       break L15;
+      }
+     }
+    }
+    while (1) {
+     d9 = +(i12 | 0);
+     i4 = _od_pvq_compute_k(+d9, -1, -1.0, 1, i51 | 0, +d46, i15 | 0) | 0;
+     d3 = d30 * d9;
+     d9 = d9 - d30;
+     d3 = d9 * (d9 * 1.4) + d3 * (2.0 - +_od_pvq_search_rdo_double(i33, i51, i4, i32, d3, i36) * 2.0);
+     d9 = +_od_pvq_rate(i12, 0, -1, 0, 0, i4, i51, i41, i35) * .147 + d3;
+     if (!(d9 <= d7)) d3 = d10; else {
+      HEAP32[i42 >> 2] = -1;
+      HEAP32[i34 >> 2] = 0;
+      i2 = 0;
+      do {
+       HEAP32[i49 + (i2 << 2) >> 2] = HEAP32[i36 + 2224 + (i2 << 2) >> 2];
+       i2 = i2 + 1 | 0;
+      } while ((i2 | 0) != (i51 | 0));
+      d7 = d9;
+      i2 = i4;
+      i5 = 1;
+      i6 = i12;
+     }
+     if ((i12 | 0) < (i16 | 0)) {
+      d10 = d3;
+      i12 = i12 + 1 | 0;
+     } else {
+      i12 = i2;
+      d7 = d11;
+      break;
+     }
+    }
+   }
+  } else {
+   i12 = i2;
+   d7 = d11;
+  }
+ } else {
+  i12 = 0;
+  d7 = 0.0;
+  i8 = 0;
+  i6 = 0;
+ } while (0);
+ i4 = (i5 | 0) != 0;
+ if (i4) i2 = (i6 | 0) == 0 & 1; else {
+  i2 = (i6 | i41 | 0) == 0 ? ((i40 | 0) != 0 ? 1 : 2) : 0;
+  if ((i6 | 0) == (i40 | 0)) i2 = i37 | (HEAP32[i42 >> 2] | 0) != 0 ? i2 : 2;
+ }
+ switch (i2 | 0) {
+ case 0:
+  {
+   d46 = +_od_gain_expand(+((i4 ? 0.0 : d38) + +(i6 | 0)), i47 | 0, +d46);
+   HEAPF64[i43 >> 3] = d46;
+   _od_pvq_synthesis_partial(i1 | 0, i49 | 0, i45 | 0, i51 | 0, i5 | 0, +d46, +d7, i8 | 0, HEAP32[i44 >> 2] | 0, i48 | 0);
+   break;
+  }
+ case 2:
+  {
+   if (i50) {
+    i2 = 0;
+    do {
+     HEAP32[i1 + (i2 << 2) >> 2] = HEAP32[i52 + (i2 << 2) >> 2];
+     i2 = i2 + 1 | 0;
+    } while ((i2 | 0) != (i51 | 0));
+   }
+   break;
+  }
+ default:
+  {
+   i2 = i1 + (i51 << 2) | 0;
+   if (i50) do {
+    HEAP32[i1 >> 2] = 0;
+    i1 = i1 + 4 | 0;
+   } while (i1 >>> 0 < i2 >>> 0);
+  }
+ }
+ HEAP32[i54 >> 2] = i12;
+ HEAPF64[i53 >> 3] = d31 - d3 + +HEAPF64[i53 >> 3];
+ if (i39) {
+  if (i4) {
+   i54 = i6;
+   return i54 | 0;
+  }
+  i54 = _neg_interleave(i6, i40) | 0;
+  return i54 | 0;
+ }
+ if (i4) {
+  i54 = i6 + -1 | 0;
+  return i54 | 0;
+ } else {
+  i54 = _neg_interleave(i6 + 1 | 0, i40 + 1 | 0) | 0;
+  return i54 | 0;
+ }
+ return 0;
+}
+
+function _od_pvq_search_rdo_double(i20, i19, i15, i21, d3, i16) {
  i20 = i20 | 0;
- i16 = i16 | 0;
- i22 = i22 | 0;
+ i19 = i19 | 0;
+ i15 = i15 | 0;
+ i21 = i21 | 0;
  d3 = +d3;
- i17 = i17 | 0;
- var i1 = 0, d2 = 0.0, i4 = 0, d5 = 0.0, d6 = 0.0, i7 = 0, i8 = 0, d9 = 0.0, d10 = 0.0, i11 = 0, i12 = 0, d13 = 0.0, d14 = 0.0, d15 = 0.0, d18 = 0.0, i19 = 0;
- i19 = (i20 | 0) > 0;
- if (i19) {
+ i16 = i16 | 0;
+ var i1 = 0, d2 = 0.0, i4 = 0, d5 = 0.0, d6 = 0.0, i7 = 0, i8 = 0, d9 = 0.0, d10 = 0.0, i11 = 0, d12 = 0.0, d13 = 0.0, d14 = 0.0, d17 = 0.0, i18 = 0;
+ i18 = (i19 | 0) > 0;
+ if (i18) {
   i1 = 0;
   d2 = 0.0;
   do {
-   i11 = HEAP32[i21 + (i1 << 2) >> 2] | 0;
-   d18 = +(((i11 | 0) > -1 ? i11 : 0 - i11 | 0) | 0);
-   HEAPF64[i17 + 160 + (i1 << 3) >> 3] = d18;
-   d2 = d2 + d18 * d18;
+   d17 = +Math_abs(+(+HEAPF64[i20 + (i1 << 3) >> 3]));
+   HEAPF64[i16 + 160 + (i1 << 3) >> 3] = d17;
+   d2 = d2 + d17 * d17;
    i1 = i1 + 1 | 0;
-  } while ((i1 | 0) != (i20 | 0));
-  d18 = d2;
- } else d18 = 0.0;
- d15 = 1.0 / +Math_sqrt(+(d18 + 1.0e-30));
- d14 = .147 / (d3 + 1.0e-30);
- if ((i16 | 0) > 2) if (i19) {
+  } while ((i1 | 0) != (i19 | 0));
+  d17 = d2;
+ } else d17 = 0.0;
+ d14 = 1.0 / +Math_sqrt(+(d17 + 1.0e-30));
+ d13 = .147 / (d3 + 1.0e-30);
+ if ((i15 | 0) > 2) if (i18) {
   i1 = 0;
   d2 = 0.0;
   do {
-   d2 = d2 + +HEAPF64[i17 + 160 + (i1 << 3) >> 3];
+   d2 = d2 + +HEAPF64[i16 + 160 + (i1 << 3) >> 3];
    i1 = i1 + 1 | 0;
-  } while ((i1 | 0) != (i20 | 0));
+  } while ((i1 | 0) != (i19 | 0));
   d5 = 1.0 / d2;
-  if (i19) {
-   d6 = +(i16 | 0);
+  if (i18) {
+   d6 = +(i15 | 0);
    i1 = 0;
    i4 = 0;
    d3 = 0.0;
    d2 = 0.0;
    do {
-    d13 = +HEAPF64[i17 + 160 + (i4 << 3) >> 3];
-    i11 = ~~+Math_floor(+(d5 * (d6 * d13)));
-    HEAP32[i22 + (i4 << 2) >> 2] = i11;
-    d3 = d3 + d13 * +(i11 | 0);
-    d2 = d2 + +(Math_imul(i11, i11) | 0);
-    i1 = i11 + i1 | 0;
+    d12 = +HEAPF64[i16 + 160 + (i4 << 3) >> 3];
+    i8 = ~~+Math_floor(+(d5 * (d6 * d12)));
+    HEAP32[i21 + (i4 << 2) >> 2] = i8;
+    d3 = d3 + d12 * +(i8 | 0);
+    d2 = d2 + +(Math_imul(i8, i8) | 0);
+    i1 = i8 + i1 | 0;
     i4 = i4 + 1 | 0;
-   } while ((i4 | 0) != (i20 | 0));
+   } while ((i4 | 0) != (i19 | 0));
    i4 = i1;
   } else {
    i4 = 0;
@@ -65,12 +378,12 @@ function _od_pvq_search_rdo_double(i21, i20, i16, i22, d3, i17) {
   i4 = 0;
   d3 = 0.0;
   d2 = 0.0;
- } else if (i19) {
+ } else if (i18) {
   i1 = 0;
   do {
-   HEAP32[i22 + (i1 << 2) >> 2] = 0;
+   HEAP32[i21 + (i1 << 2) >> 2] = 0;
    i1 = i1 + 1 | 0;
-  } while ((i1 | 0) != (i20 | 0));
+  } while ((i1 | 0) != (i19 | 0));
   i4 = 0;
   d3 = 0.0;
   d2 = 0.0;
@@ -79,22 +392,21 @@ function _od_pvq_search_rdo_double(i21, i20, i16, i22, d3, i17) {
   d3 = 0.0;
   d2 = 0.0;
  }
- d13 = 3.0 / +(i20 | 0);
- i1 = (i16 | 0) / -4 | 0;
- i11 = i16 + -1 + i1 | 0;
- do if ((i4 | 0) < (i11 | 0)) {
-  i8 = i1 + i16 + -1 | 0;
-  if (!i19) {
-   d5 = +HEAPF64[i17 + 160 >> 3];
-   i1 = HEAP32[i22 >> 2] | 0;
+ d12 = 3.0 / +(i19 | 0);
+ i1 = (i15 | 0) / -4 | 0;
+ do if ((i4 | 0) < (i15 + -1 + i1 | 0)) {
+  i8 = i1 + i15 + -1 | 0;
+  if (!i18) {
+   d5 = +HEAPF64[i16 + 160 >> 3];
+   i1 = HEAP32[i21 >> 2] | 0;
    do {
     d3 = d3 + d5;
     d2 = d2 + +(i1 << 1 | 0) + 1.0;
     i1 = i1 + 1 | 0;
     i4 = i4 + 1 | 0;
    } while ((i4 | 0) != (i8 | 0));
-   HEAP32[i22 >> 2] = i1;
-   i1 = i11;
+   HEAP32[i21 >> 2] = i1;
+   i1 = i8;
    break;
   }
   do {
@@ -103,85 +415,146 @@ function _od_pvq_search_rdo_double(i21, i20, i16, i22, d3, i17) {
    i7 = 0;
    i1 = 0;
    while (1) {
-    d5 = d3 + +HEAPF64[i17 + 160 + (i7 << 3) >> 3];
-    d6 = d2 + +(HEAP32[i22 + (i7 << 2) >> 2] << 1 | 0) + 1.0;
+    d5 = d3 + +HEAPF64[i16 + 160 + (i7 << 3) >> 3];
+    d6 = d2 + +(HEAP32[i21 + (i7 << 2) >> 2] << 1 | 0) + 1.0;
     d5 = d5 * d5;
-    if (!i7) i12 = 16; else if (d10 * d5 > d9 * d6) i12 = 16; else {
+    if (!i7) i11 = 17; else if (d10 * d5 > d9 * d6) i11 = 17; else {
      d5 = d9;
      d6 = d10;
     }
-    if ((i12 | 0) == 16) {
-     i12 = 0;
+    if ((i11 | 0) == 17) {
+     i11 = 0;
      i1 = i7;
     }
     i7 = i7 + 1 | 0;
-    if ((i7 | 0) == (i20 | 0)) break; else {
+    if ((i7 | 0) == (i19 | 0)) break; else {
      d9 = d5;
      d10 = d6;
     }
    }
-   d3 = d3 + +HEAPF64[i17 + 160 + (i1 << 3) >> 3];
-   i7 = i22 + (i1 << 2) | 0;
-   i1 = HEAP32[i7 >> 2] | 0;
-   d2 = d2 + +(i1 << 1 | 0) + 1.0;
-   HEAP32[i7 >> 2] = i1 + 1;
+   i7 = HEAP32[i21 + (i1 << 2) >> 2] | 0;
+   d3 = d3 + +HEAPF64[i16 + 160 + (i1 << 3) >> 3];
+   d2 = d2 + +(i7 << 1 | 0) + 1.0;
+   HEAP32[i21 + (i1 << 2) >> 2] = i7 + 1;
    i4 = i4 + 1 | 0;
   } while ((i4 | 0) != (i8 | 0));
-  i1 = i11;
+  i1 = i8;
  } else i1 = i4; while (0);
- L35 : do if ((i1 | 0) < (i16 | 0)) {
-  if (!i19) {
-   i4 = i17 + 160 | 0;
+ L35 : do if ((i1 | 0) < (i15 | 0)) {
+  if (!i18) {
+   i4 = i16 + 160 | 0;
    while (1) {
-    _od_fill_dynamic_rsqrt_table(i17, 4, d2);
+    _od_fill_dynamic_rsqrt_table(i16, 4, d2);
     d3 = d3 + +HEAPF64[i4 >> 3];
-    i12 = HEAP32[i22 >> 2] | 0;
-    d2 = d2 + +(i12 << 1 | 0) + 1.0;
-    HEAP32[i22 >> 2] = i12 + 1;
+    i11 = HEAP32[i21 >> 2] | 0;
+    d2 = d2 + +(i11 << 1 | 0) + 1.0;
+    HEAP32[i21 >> 2] = i11 + 1;
     i1 = i1 + 1 | 0;
-    if ((i1 | 0) == (i16 | 0)) break L35;
+    if ((i1 | 0) == (i15 | 0)) break L35;
    }
   }
   do {
-   _od_fill_dynamic_rsqrt_table(i17, 4, d2);
+   _od_fill_dynamic_rsqrt_table(i16, 4, d2);
    d6 = -1.0e5;
    i7 = 0;
    i4 = 0;
    while (1) {
-    d5 = d3 + +HEAPF64[i17 + 160 + (i7 << 3) >> 3];
-    d5 = +_od_custom_rsqrt_dynamic_table(i17, 4, d2, HEAP32[i22 + (i7 << 2) >> 2] | 0) * (d15 * (d5 * 2.0)) - d13 * (d14 * +(i7 | 0));
+    d5 = d3 + +HEAPF64[i16 + 160 + (i7 << 3) >> 3];
+    d5 = +_od_custom_rsqrt_dynamic_table(i16, 4, d2, HEAP32[i21 + (i7 << 2) >> 2] | 0) * (d14 * (d5 * 2.0)) - d12 * (d13 * +(i7 | 0));
     i8 = (i7 | 0) == 0 | d5 > d6;
     i4 = i8 ? i7 : i4;
     i7 = i7 + 1 | 0;
-    if ((i7 | 0) == (i20 | 0)) break; else d6 = i8 ? d5 : d6;
+    if ((i7 | 0) == (i19 | 0)) break; else d6 = i8 ? d5 : d6;
    }
-   d3 = d3 + +HEAPF64[i17 + 160 + (i4 << 3) >> 3];
-   i12 = i22 + (i4 << 2) | 0;
-   i11 = HEAP32[i12 >> 2] | 0;
+   i11 = HEAP32[i21 + (i4 << 2) >> 2] | 0;
+   d3 = d3 + +HEAPF64[i16 + 160 + (i4 << 3) >> 3];
    d2 = d2 + +(i11 << 1 | 0) + 1.0;
-   HEAP32[i12 >> 2] = i11 + 1;
+   HEAP32[i21 + (i4 << 2) >> 2] = i11 + 1;
    i1 = i1 + 1 | 0;
-  } while ((i1 | 0) != (i16 | 0));
+  } while ((i1 | 0) != (i15 | 0));
  } while (0);
- if (i19) i1 = 0; else {
-  d18 = d18 * d2;
-  d18 = +Math_sqrt(+d18);
-  d18 = d18 + 1.0e-100;
-  d18 = d3 / d18;
-  return +d18;
+ if (i18) i1 = 0; else {
+  d17 = d17 * d2;
+  d17 = +Math_sqrt(+d17);
+  d17 = d17 + 1.0e-100;
+  d17 = d3 / d17;
+  return +d17;
  }
  do {
-  if ((HEAP32[i21 + (i1 << 2) >> 2] | 0) < 0) {
-   i19 = i22 + (i1 << 2) | 0;
-   HEAP32[i19 >> 2] = 0 - (HEAP32[i19 >> 2] | 0);
+  if (+HEAPF64[i20 + (i1 << 3) >> 3] < 0.0) {
+   i18 = i21 + (i1 << 2) | 0;
+   HEAP32[i18 >> 2] = 0 - (HEAP32[i18 >> 2] | 0);
   }
   i1 = i1 + 1 | 0;
- } while ((i1 | 0) != (i20 | 0));
- d18 = d18 * d2;
- d18 = +Math_sqrt(+d18);
- d18 = d18 + 1.0e-100;
- d18 = d3 / d18;
- return +d18;
+ } while ((i1 | 0) != (i19 | 0));
+ d17 = d17 * d2;
+ d17 = +Math_sqrt(+d17);
+ d17 = d17 + 1.0e-100;
+ d17 = d3 / d17;
+ return +d17;
+}
+
+function _init_tables(i1) {
+ i1 = i1 | 0;
+ HEAPF64[i1 >> 3] = 1.0;
+ HEAPF64[i1 + 8 >> 3] = .7071067811865475;
+ HEAPF64[i1 + 16 >> 3] = .5773502691896258;
+ HEAPF64[i1 + 24 >> 3] = .5;
+ HEAPF64[i1 + 32 >> 3] = .4472135954999579;
+ HEAPF64[i1 + 40 >> 3] = .4082482904638631;
+ HEAPF64[i1 + 48 >> 3] = .3779644730092272;
+ HEAPF64[i1 + 56 >> 3] = .35355339059327373;
+ HEAPF64[i1 + 64 >> 3] = .3333333333333333;
+ HEAPF64[i1 + 72 >> 3] = .31622776601683794;
+ HEAPF64[i1 + 80 >> 3] = .30151134457776363;
+ HEAPF64[i1 + 88 >> 3] = .2886751345948129;
+ HEAPF64[i1 + 96 >> 3] = .2773500981126146;
+ HEAPF64[i1 + 104 >> 3] = .2672612419124244;
+ HEAPF64[i1 + 112 >> 3] = .2581988897471611;
+ HEAPF64[i1 + 120 >> 3] = .25;
+ return;
+}
+
+function _od_pvq_rate(i8, i5, i9, i10, i4, i2, i3, i6, i7) {
+ i8 = i8 | 0;
+ i5 = i5 | 0;
+ i9 = i9 | 0;
+ i10 = i10 | 0;
+ i4 = i4 | 0;
+ i2 = i2 | 0;
+ i3 = i3 | 0;
+ i6 = i6 | 0;
+ i7 = i7 | 0;
+ var d1 = 0.0;
+ d1 = +(i3 | 0);
+ d1 = d1 * (+Math_log(+(+(i2 | 0) * +Math_log(+(+(i3 << 1 | 0))) / d1 + 1.0)) * 1.4426950408889634);
+ if ((i8 | 0) > 0 & (i9 | 0) > -1) {
+  d1 = d1 + +Math_log(+(+(i10 | 0))) * 1.4426950408889634 * .9;
+  d1 = (i6 | 0) != 0 & (i7 | 0) == 0 ? d1 + 6.0 : d1;
+  return +((i8 | 0) == (i5 | 0) ? d1 + -.5 : d1);
+ } else return +d1;
+ return 0.0;
+}
+
+function _od_vector_is_null(i3, i2) {
+ i3 = i3 | 0;
+ i2 = i2 | 0;
+ var i1 = 0;
+ L1 : do if ((i2 | 0) > 0) {
+  i1 = 0;
+  while (1) {
+   if (HEAP32[i3 + (i1 << 2) >> 2] | 0) {
+    i1 = 0;
+    break L1;
+   }
+   i1 = i1 + 1 | 0;
+   if ((i1 | 0) >= (i2 | 0)) {
+    i1 = 1;
+    break;
+   }
+  }
+ } else i1 = 1; while (0);
+ return i1 | 0;
 }
 
 function _od_fill_dynamic_rsqrt_table(i3, i4, d2) {
@@ -212,31 +585,6 @@ function _od_custom_rsqrt_dynamic_table(i3, i4, d2, i1) {
  return 0.0;
 }
 
-function _od_rsqrt_table(i2, i1) {
- i2 = i2 | 0;
- i1 = i1 | 0;
- var d3 = 0.0;
- if ((i1 | 0) < 17) {
-  d3 = +HEAPF64[i2 + (i1 + -1 << 3) >> 3];
-  return +d3;
- } else {
-  d3 = 1.0 / +Math_sqrt(+(+(i1 | 0)));
-  return +d3;
- }
- return 0.0;
-}
-
-function _init_tables(i2) {
- i2 = i2 | 0;
- var i1 = 0;
- i1 = 1;
- do {
-  HEAPF64[i2 + (i1 + -1 << 3) >> 3] = 1.0 / +Math_sqrt(+(+(i1 | 0)));
-  i1 = i1 + 1 | 0;
- } while ((i1 | 0) != 17);
- return;
-}
-
 function _neg_interleave(i2, i1) {
  i2 = i2 | 0;
  i1 = i1 | 0;
@@ -254,47 +602,19 @@ function _neg_interleave(i2, i1) {
  return 0;
 }
 
-function _od_vector_is_null(i3, i2) {
- i3 = i3 | 0;
+function _od_rsqrt_table(i2, i1) {
  i2 = i2 | 0;
- var i1 = 0;
- L1 : do if ((i2 | 0) > 0) {
-  i1 = 0;
-  while (1) {
-   if (HEAP32[i3 + (i1 << 2) >> 2] | 0) {
-    i1 = 0;
-    break L1;
-   }
-   i1 = i1 + 1 | 0;
-   if ((i1 | 0) >= (i2 | 0)) {
-    i1 = 1;
-    break;
-   }
-  }
- } else i1 = 1; while (0);
- return i1 | 0;
-}
-
-function _od_pvq_rate(i8, i5, i9, i10, i4, i2, i3, i6, i7) {
- i8 = i8 | 0;
- i5 = i5 | 0;
- i9 = i9 | 0;
- i10 = i10 | 0;
- i4 = i4 | 0;
- i2 = i2 | 0;
- i3 = i3 | 0;
- i6 = i6 | 0;
- i7 = i7 | 0;
- var d1 = 0.0;
- d1 = +(i3 | 0);
- d1 = d1 * (+Math_log(+(+(i2 | 0) * +Math_log(+(+(i3 << 1 | 0))) / d1 + 1.0)) * LOG2E);
- if ((i8 | 0) > 0 & (i9 | 0) > -1) {
-  d1 = d1 + +Math_log(+(+(i10 | 0))) * LOG2E * .9;
-  d1 = (i6 | 0) != 0 & (i7 | 0) == 0 ? d1 + 6.0 : d1;
-  return +((i8 | 0) == (i5 | 0) ? d1 + -.5 : d1);
- } else return +d1;
+ i1 = i1 | 0;
+ var d3 = 0.0;
+ if ((i1 | 0) < 17) {
+  d3 = +HEAPF64[i2 + (i1 + -1 << 3) >> 3];
+  return +d3;
+ } else {
+  d3 = 1.0 / +Math_sqrt(+(+(i1 | 0)));
+  return +d3;
+ }
  return 0.0;
 }
 
-  return { od_pvq_search_rdo_double: _od_pvq_search_rdo_double, init_tables: _init_tables, od_rsqrt_table: _od_rsqrt_table, od_custom_rsqrt_dynamic_table: _od_custom_rsqrt_dynamic_table, od_fill_dynamic_rsqrt_table: _od_fill_dynamic_rsqrt_table, neg_interleave: _neg_interleave, od_vector_is_null: _od_vector_is_null, od_pvq_rate: _od_pvq_rate };
+  return { _od_pvq_search_rdo_double: _od_pvq_search_rdo_double, _od_pvq_rate: _od_pvq_rate, _init_tables: _init_tables, _od_rsqrt_table: _od_rsqrt_table, _neg_interleave: _neg_interleave, _od_custom_rsqrt_dynamic_table: _od_custom_rsqrt_dynamic_table, _od_vector_is_null: _od_vector_is_null, _od_pvq_theta: _od_pvq_theta, _od_fill_dynamic_rsqrt_table: _od_fill_dynamic_rsqrt_table };
 })(window, null, window.HEAP);
