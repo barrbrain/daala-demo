@@ -86,7 +86,7 @@ extern void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
                                   const od_val16 *r, int n,
                                   int noref, od_val32 g,
                                   od_val32 theta, int m, int s,
-                                  const short *qm_inv);
+                                  const short *qm_inv, od_val16 *x_tmp);
 extern od_val32 od_gain_expand(od_val32 cg, int q0, double beta);
 extern od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
  double beta, int bshift);
@@ -122,6 +122,7 @@ struct tables {
  od_val16 x16[MAXN];
  od_val16 r16[MAXN];
  od_val16 xr[MAXN];
+ od_val16 x_tmp[MAXN];
  od_val32 g;
  od_val32 gr;
  od_coeff y_tmp[MAXN];
@@ -576,7 +577,7 @@ int od_pvq_theta(od_coeff *out, const od_coeff *x0, const od_coeff *r0,
     if (noref) gain_offset = 0;
     *g = od_gain_expand(OD_SHL(qg, OD_CGAIN_SHIFT) + gain_offset, q0, beta);
     od_pvq_synthesis_partial(out, y, r16, n, noref, *g, theta, m, *s,
-     qm_inv);
+     qm_inv, t->x_tmp);
   }
   *vk = k;
   *skip_diff += skip_dist - best_dist;

@@ -86,7 +86,7 @@ void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
                                   const od_val16 *r, int n,
                                   int noref, od_val32 g,
                                   od_val32 theta, int m, int s,
-                                  const short *qm_inv);
+                                  const short *qm_inv, od_val16 *x_tmp);
 od_val32 od_gain_expand(od_val32 cg, int q0, double beta);
 od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
  double beta, int bshift);
@@ -556,6 +556,8 @@ int od_vector_log_mag(const od_coeff *x, int n) {
  * @param [out]     sign   sign of reflection
  * @return                 dimension number to which reflection aligns
  **/
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 int od_compute_householder(od_val16 *r, int n, od_val32 gr, int *sign,
  int shift) {
   int m;
@@ -588,6 +590,8 @@ int od_compute_householder(od_val16 *r, int n, od_val32 gr, int *sign,
  * @param [in]      r      reflection
  * @param [in]      n      number of dimensions in x,r
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
  int n) {
   int i;
@@ -616,7 +620,9 @@ void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
  * @param [in]  beta  activity masking beta param (exponent)
  * @return            g^(1/beta)
  */
-static od_val32 od_gain_compand(od_val32 g, int q0, double beta) {
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
+od_val32 od_gain_compand(od_val32 g, int q0, double beta) {
   if (beta == 1) return OD_ROUND32(OD_CGAIN_SCALE*g/(double)q0);
   else {
     return OD_ROUND32(OD_CGAIN_SCALE*OD_COMPAND_SCALE*pow(g*OD_COMPAND_SCALE_1,
@@ -665,6 +671,8 @@ static int32_t od_sqrt(int32_t x, int *sqrt_shift)
  * @param [in]  beta  activity masking beta param (exponent)
  * @return            g^beta
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 od_val32 od_gain_expand(od_val32 cg0, int q0, double beta) {
   if (beta == 1) {
     /*The multiply fits into 28 bits because the expanded gain has a range from
@@ -713,6 +721,8 @@ od_val32 od_gain_expand(od_val32 cg0, int q0, double beta) {
  * @param [in]      bshift shift to be applied to raw gain
  * @return                 quantized/companded gain
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
  double beta, int bshift) {
   int i;
@@ -733,6 +743,8 @@ od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
  * @param [in]      beta   activity masking beta param
  * @return                 max theta value
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 int od_pvq_compute_max_theta(od_val32 qcg, double beta){
   /* Set angular resolution (in ra) to match the encoded gain */
   int ts = (int)floor(.5 + qcg*OD_CGAIN_SCALE_1*M_PI/(2*beta));
@@ -747,6 +759,8 @@ int od_pvq_compute_max_theta(od_val32 qcg, double beta){
  * @param [in]      max_theta  maximum theta value
  * @return                     decoded theta value
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 od_val32 od_pvq_compute_theta(int t, int max_theta) {
   if (max_theta != 0) {
     return OD_ROUND32(OD_THETA_SCALE*OD_MINI(t, max_theta - 1)*
@@ -768,6 +782,8 @@ od_val32 od_pvq_compute_theta(int t, int max_theta) {
  * @param [in]      nodesync   do not use info that depend on the reference
  * @return                     number of pulses to use for coding
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref, int n,
  double beta, int nodesync) {
   if (noref) {
@@ -871,9 +887,11 @@ static int16_t od_rsqrt(int32_t x, int *rsqrt_shift)
  * @param [in]      s       sign of Householder reflection
  * @param [in]      qm_inv  inverse of the QM with magnitude compensation
  */
+EMSCRIPTEN_KEEPALIVE
+__attribute__((noinline))
 void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
  const od_val16 *r16, int n, int noref, od_val32 g, od_val32 theta, int m, int s,
- const short *qm_inv) {
+ const short *qm_inv, od_val16 *x_tmp) {
   int i;
   int yy;
   od_val32 scale;
@@ -924,7 +942,7 @@ void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
     }
   }
   else{
-    od_val16 x[MAXN];
+    od_val16 *x = x_tmp;
     scale = OD_ROUND32(scale*OD_TRIG_SCALE_1*od_pvq_sin(theta));
     /* The following multiply doesn't round, but it's probably OK since
        the Householder reflection is likely to undo most of the resulting
