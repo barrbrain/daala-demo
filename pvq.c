@@ -22,6 +22,103 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+
+#include <emscripten.h>
+
+#define MAXN (64)
+
+/* Normalized lambda for PVQ quantizer. Since we normalize the gain by q, the
+   distortion is normalized by q^2 and lambda does not need the q^2 factor.
+   At high rate, this would be log(2)/6, but we're using a slightly more
+   aggressive value, closer to:
+   Li, Xiang, et al. "Laplace distribution based Lagrangian rate distortion
+   optimization for hybrid video coding." Circuits and Systems for Video
+   Technology, IEEE Transactions on 19.2 (2009): 193-205.
+   */
+#define OD_PVQ_LAMBDA (.147)
+
+#define OD_PVQ_SKIP_ZERO 1
+#define OD_PVQ_SKIP_COPY 2
+
+/* Maximum size for coding a PVQ band. */
+#define OD_MAX_PVQ_SIZE (128)
+
+#define OD_LOG2(x) (M_LOG2E*log(x))
+
+#define OD_MINF(a, b) ((a) < (b) ? (a) : (b))
+#define OD_MAXF(a, b) ((a) > (b) ? (a) : (b))
+
+/*#define OD_MAXI(a, b) ((a) < (b) ? (b) : (a))*/
+# define OD_MAXI(a, b) ((a) ^ (((a) ^ (b)) & -((b) > (a))))
+/*#define OD_MINI(a, b) ((a) > (b) ? (b) : (a))*/
+# define OD_MINI(a, b) ((a) ^ (((b) ^ (a)) & -((b) < (a))))
+
+#define OD_QM_SHIFT (15)
+#define OD_QM_SCALE (1 << OD_QM_SHIFT)
+#define OD_QM_SCALE_1 (1./OD_QM_SCALE)
+
+#define OD_DISABLE_CFL (0)
+
+typedef int od_coeff;
+typedef double od_val16;
+typedef double od_val32;
+# define OD_ROUND16(x) (x)
+# define OD_ROUND32(x) (x)
+# define OD_SHL(x, shift) (x)
+# define OD_SHR(x, shift) (x)
+# define OD_SHR_ROUND(x, shift) (x)
+# define OD_ABS(x) (fabs(x))
+# define OD_MULT16_16(a, b) ((a)*(b))
+# define OD_MULT16_32_Q16(a, b) ((a)*(b))
+
+#define OD_THETA_SCALE (1)
+#define OD_TRIG_SCALE (1)
+#define OD_CGAIN_SCALE (1)
+#define OD_THETA_SCALE_1 (1./OD_THETA_SCALE)
+#define OD_TRIG_SCALE_1 (1./OD_TRIG_SCALE)
+#define OD_CGAIN_SCALE_1 (1./OD_CGAIN_SCALE)
+#define OD_CGAIN_SCALE_2 (OD_CGAIN_SCALE_1*OD_CGAIN_SCALE_1)
+
+void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
+                                  const od_val16 *r, int n,
+                                  int noref, od_val32 g,
+                                  od_val32 theta, int m, int s,
+                                  const short *qm_inv);
+od_val32 od_gain_expand(od_val32 cg, int q0, double beta);
+od_val32 od_pvq_compute_gain(const od_val16 *x, int n, int q0, od_val32 *g,
+ double beta, int bshift);
+int od_compute_householder(od_val16 *r, int n, od_val32 gr, int *sign,
+ int shift);
+void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
+ int n);
+int od_pvq_compute_max_theta(od_val32 qcg, double beta);
+ od_val32 od_pvq_compute_theta(int t, int max_theta);
+int od_pvq_compute_k(od_val32 qcg, int itheta, od_val32 theta, int noref,
+ int n, double beta, int nodesync);
+
+#define od_pvq_sin(x) sin(x)
+#define od_pvq_cos(x) cos(x)
+
+#define OD_FLOAT_PVQ (1)
+
+#define OD_COEFF_SHIFT (4)
+
+#define OD_COMPAND_SHIFT (8 + OD_COEFF_SHIFT)
+#define OD_COMPAND_SCALE (1 << OD_COMPAND_SHIFT)
+#define OD_COMPAND_SCALE_1 (1./OD_COMPAND_SCALE)
+
+# define OD_CLZ0 (32)
+# define OD_CLZ(x) (__builtin_clz(x))
+# define OD_ILOG_NZ(x) (OD_CLZ0 - OD_CLZ(x))
+# define OD_ILOG(x) (OD_ILOG_NZ(x) & -!!(x))
+
+#define OD_QM_INV_SHIFT (12)
+#define OD_QM_INV_SCALE (1 << OD_QM_INV_SHIFT)
+#define OD_QM_INV_SCALE_1 (1./OD_QM_INV_SCALE)
+
 #if 0
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -329,7 +426,6 @@ void od_init_qm(int16_t *x, int16_t *x_inv, const int *qm) {
           }
           else {
             mag /= 0.0625*qm[(i << 1 >> bs)*8 + (j << 1 >> bs)];
-            OD_ASSERT(mag > 0.0);
           }
           /*Convert to fit in 16 bits.*/
           y[i*(4 << bs) + j] = (int16_t)OD_MINI(OD_QM_SCALE_MAX,
@@ -513,7 +609,6 @@ void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
   }
 }
 
-#if 0
 /** Gain companding: raises gain to the power 1/beta for activity masking.
  *
  * @param [in]  g     real (uncompanded) gain
@@ -529,6 +624,7 @@ static od_val32 od_gain_compand(od_val32 g, int q0, double beta) {
   }
 }
 
+#if 0
 #if !defined(OD_FLOAT_PVQ)
 #define OD_SQRT_INSHIFT 16
 #define OD_SQRT_OUTSHIFT 15
@@ -777,18 +873,17 @@ static int16_t od_rsqrt(int32_t x, int *rsqrt_shift)
  */
 void od_pvq_synthesis_partial(od_coeff *xcoeff, const od_coeff *ypulse,
  const od_val16 *r16, int n, int noref, od_val32 g, od_val32 theta, int m, int s,
- const int16_t *qm_inv) {
+ const short *qm_inv) {
   int i;
   int yy;
   od_val32 scale;
   int nn;
   int gshift;
   int qshift;
-  OD_ASSERT(g != 0);
   nn = n-(!noref); /* when noref==0, vector in is sized n-1 */
   yy = 0;
   for (i = 0; i < nn; i++)
-    yy += ypulse[i]*(int32_t)ypulse[i];
+    yy += ypulse[i]*(int)ypulse[i];
   /* Shift required for the magnitude of the pre-qm synthesis to be guaranteed
      to fit in 16 bits. In practice, the range will be 8192-16384 after scaling
      most of the time. */
