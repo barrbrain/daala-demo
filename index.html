@@ -68,12 +68,20 @@ a:hover {
   font-style: italic;
 }
 
-.parameter {
+.parameter, .group {
   display: inline-block;
 }
 
-#demo > div {
+.parameter, #status {
   margin: 1ex;
+}
+
+#scaleVal {
+  width: 6ex;
+}
+
+#betaVal, #strengthVal {
+  width: 5ex;
 }
 </style>
 </head>
@@ -110,29 +118,41 @@ However, it still illustrates the many uses of directed selective smoothing in r
   <input id="userImage" type="file" onchange="loadUserImage(event)" />
 </div>
 <div class="parameter">
-  <label for="lapping">4-point lapping filter (deblocking)</label>
   <input id="lapping" checked type="checkbox" onchange="changeLapping(this)"/>
+  <label for="lapping">4-point lapping filter</label>
 </div>
 <div class="parameter">
-  <input id="pvqMethod" type="radio" name="method" value="pvq" onchange="changeMethod(this)" checked/>
-  <label for="pvqMethod">PVQ</label>
-  <input id="usqMethod" type="radio" name="method" value="usq" onchange="changeMethod(this)"/>
-  <label for="usqMethod">USQ</label>
+  <label for="scale">Quantization level</label>
+  <div class="group">
+    <input id="scale" type="range" min="1" max="63" step="1" value="36" oninput="changeScale(this, false)" onchange="changeScale(this, true)"/>
+    <span id="scaleVal">26.3125</span>
+  </div>
 </div>
-<div class="parameter">
-  <label for="scale">Quantization level (log scale)</label>
-  <input id="scale" type="range" min="1" max="63" step="1" value="36" oninput="changeScale(this, false)" onchange="changeScale(this, true)"/>
-  <span id="scaleVal">26.3125</span>
-</div>
-<div class="parameter">
-  <label for="beta">Beta (AM)</label>
-  <input id="beta" type="range" min="12" max="24" step="1" value="18" oninput="changeBeta(this, false)" onchange="changeBeta(this, true)"/>
-  <span id="betaVal">1.5</span>
+<div class="group">
+  <div class="parameter">
+    <input id="usqMethod" type="radio" name="method" value="usq" onchange="changeMethod(this)"/>
+    <label for="usqMethod">Uniform Scalar</label>
+  </div>
+  <div class="group">
+    <div class="parameter">
+      <input id="pvqMethod" type="radio" name="method" value="pvq" onchange="changeMethod(this)" checked/>
+      <label for="pvqMethod">Perceptual Vector</label>
+    </div>
+    <div class="parameter">
+      <label for="beta">Beta</label>
+      <div class="group">
+        <input id="beta" type="range" min="12" max="24" step="1" value="18" oninput="changeBeta(this, false)" onchange="changeBeta(this, true)"/>
+        <span id="betaVal">1.5</span>
+      </div>
+    </div>
+  </div>
 </div>
 <div class="parameter">
   <label for="strenth">Deringing filter strength</label>
-  <input id="strength" type="range" min="0" max="5" step="1" value="1" oninput="changeStrength(this, false)" onchange="changeStrength(this, true)"/>
-  <span id="strengthVal">0.5</span>
+  <div class="group">
+    <input id="strength" type="range" min="0" max="5" step="1" value="1" oninput="changeStrength(this, false)" onchange="changeStrength(this, true)"/>
+    <span id="strengthVal">0.5</span>
+  </div>
 </div>
 <div id="status">&nbsp;</div>
 <canvas id='canvas' width=1 height=1></canvas>
