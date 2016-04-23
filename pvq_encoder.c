@@ -314,9 +314,26 @@ double od_pvq_rate(int qg, int icgr, int theta, int ts,
  const int *y0, int k, int n,
  int is_keyframe, int pli) {
   double rate;
-  /* Estimates the number of bits it will cost to encode K pulses in
-     N dimensions based on experimental data for bitrate vs K. */
-  rate = n*OD_LOG2(1+log(n*2)*k/n);
+  if (k > 0){
+    /* Estimates the number of bits it will cost to encode K pulses in
+       N dimensions based on the entropy of the codeword and the signs */
+    double x;
+    int i;
+    rate = 0.08106146679532733;
+    x = k+n;
+    rate += (x-.5)*log(x)+1./(12.*x);
+    x = k+1;
+    rate -= (x-.5)*log(x)+1./(12.*x);
+    x = n;
+    rate -= (x-.5)*log(x)+1./(12.*x);
+    rate /= M_LN2;
+    if (y0) {
+      for (i = 0; i < n; i++) rate += !!y0[i];
+    } else {
+      rate += OD_MINI(k, n);
+    }
+  }
+  else rate = 0;
   if (qg > 0 && theta >= 0) {
     /* Approximate cost of entropy-coding theta */
     rate += .9*OD_LOG2(ts);
