@@ -82,6 +82,11 @@ function changeBeta(beta, post) {
   if (post) worker.postMessage({beta: value});
 }
 
+function changeCfL(cfl) {
+  var value = !!(cfl.checked);
+  worker.postMessage({cfl: value});
+}
+
 function changeMethod(method) {
   var value = method.value;
   worker.postMessage({method: value});

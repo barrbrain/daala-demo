@@ -142,7 +142,7 @@ function usq8x8(x, scale) {
   return bitcount|0;
 }
 
-function pvq8x8(x, scale, beta, pli) {
+function pvq8x8(x, scale, beta, pli, cfl) {
   var bitcount = 0, k = 0, v = 0;
   var robust = 1, keyframe = 1;
   var q0 = Math.round(scale / beta)|0;
@@ -159,7 +159,7 @@ function pvq8x8(x, scale, beta, pli) {
       I4[(r0>>2)+k] = 0;
     }
   }
-  if (pli == 1) {
+  if (pli == 1 && cfl) {
     for (k = 0; k < 64; k++) {
       I4[(r0>>2)+k] = I4[y+k];
     }
@@ -194,7 +194,7 @@ function quantize(w, h, scale, method) {
     for (j = 0; j < w; j += 8) {
       for (pli = 0; pli < 3; pli++) {
         dct.od_bin_fdct8x8(pvq_in, 8, (pli*w*h + p + j) << 2, w, block_buf);
-        bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, config.beta, pli) : usq8x8(pvq_in>>2, scale);
+        bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, config.beta, pli, config.cfl) : usq8x8(pvq_in>>2, scale);
         dct.od_bin_idct8x8((pli*w*h + p + j) << 2, w, pvq_in, 8, block_buf);
       }
     }
@@ -207,6 +207,7 @@ var config = {
   method: 'pvq',
   scale: 421,
   beta: 1.5,
+  cfl: true,
   strength: 0.5,
   lapping: true
 };
@@ -265,6 +266,9 @@ onmessage = function(e) {
   }
   if ('beta' in message) {
     config.beta = message.beta;
+  }
+  if ('cfl' in message) {
+    config.cfl = message.cfl;
   }
   if ('method' in message) {
     config.method = message.method;

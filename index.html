@@ -131,19 +131,23 @@ However, it still illustrates the many uses of directed selective smoothing in r
 <div class="group">
   <div class="parameter">
     <input id="usqMethod" type="radio" name="method" value="usq" onchange="changeMethod(this)"/>
-    <label for="usqMethod">Uniform Scalar</label>
+    <label for="usqMethod" title="Uniform Scalar Quantization">USQ</label>
   </div>
-  <div class="group">
+  <div class="group" style="border:1px solid white;">
     <div class="parameter">
       <input id="pvqMethod" type="radio" name="method" value="pvq" onchange="changeMethod(this)" checked/>
-      <label for="pvqMethod">Perceptual Vector</label>
+      <label for="pvqMethod" title="Perceptual Vector Quantization">PVQ</label>
     </div>
     <div class="parameter">
-      <label for="beta">Beta</label>
+      <label for="beta" title="Activity Masking/Gain Companding Beta">Beta</label>
       <div class="group">
         <input id="beta" type="range" min="12" max="24" step="1" value="18" oninput="changeBeta(this, false)" onchange="changeBeta(this, true)"/>
         <span id="betaVal">1.5</span>
       </div>
+    </div>
+    <div class="parameter">
+      <input id="cfl" checked type="checkbox" onchange="changeCfL(this)"/>
+      <label for="cfl" title="Chroma from Luma">CfL</label>
     </div>
   </div>
 </div>
