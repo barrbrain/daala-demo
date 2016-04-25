@@ -139,7 +139,6 @@ void init_tables(struct tables *t) {
 
 /* Computes 1/sqrt(i) using a table for small values. */
 EMSCRIPTEN_KEEPALIVE
-__attribute__((noinline))
 double od_rsqrt_table(struct tables *t, int i) {
   if (i <= 16) return t->small[i-1];
   else return 1./sqrt(i);
@@ -148,7 +147,6 @@ double od_rsqrt_table(struct tables *t, int i) {
 /*Computes 1/sqrt(start+2*i+1) using a lookup table containing the results
    where 0 <= i < table_size.*/
 EMSCRIPTEN_KEEPALIVE
-__attribute__((noinline))
 double od_custom_rsqrt_dynamic_table(struct tables *t,
  const int table_size, const double start, const int i) {
   if (i < table_size) return t->custom[i];
@@ -157,7 +155,6 @@ double od_custom_rsqrt_dynamic_table(struct tables *t,
 
 /*Fills tables used in od_custom_rsqrt_dynamic_table for a given start.*/
 EMSCRIPTEN_KEEPALIVE
-__attribute__((noinline))
 void od_fill_dynamic_rsqrt_table(struct tables *t, const int table_size,
  const double start) {
   int i;
