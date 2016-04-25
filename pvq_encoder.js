@@ -524,57 +524,80 @@ function _od_pvq_search_rdo_double(i23, i22, i18, i24, d3, i19) {
  return +d20;
 }
 
-function _od_pvq_synthesis_partial(i15, i12, i10, i13, i2, d7, d9, i1, i8, i14, i11) {
+function _od_pvq_synthesis_partial(i15, i10, i11, i13, i3, d4, d9, i1, i8, i14, i12) {
  i15 = i15 | 0;
- i12 = i12 | 0;
  i10 = i10 | 0;
+ i11 = i11 | 0;
  i13 = i13 | 0;
- i2 = i2 | 0;
- d7 = +d7;
+ i3 = i3 | 0;
+ d4 = +d4;
  d9 = +d9;
  i1 = i1 | 0;
  i8 = i8 | 0;
  i14 = i14 | 0;
- i11 = i11 | 0;
- var d3 = 0.0, i4 = 0, i5 = 0, i6 = 0, i16 = 0;
- i5 = (i2 | 0) != 0;
- i6 = i13 - (i5 & 1 ^ 1) | 0;
- if ((i6 | 0) > 0) {
-  i4 = 0;
-  i2 = 0;
+ i12 = i12 | 0;
+ var d2 = 0.0, i5 = 0, i6 = 0, i7 = 0, i16 = 0;
+ i6 = (i3 | 0) != 0;
+ i7 = i13 - (i6 & 1 ^ 1) | 0;
+ if ((i7 | 0) > 0) {
+  i5 = 0;
+  i3 = 0;
   do {
-   i16 = HEAP32[i12 + (i4 << 2) >> 2] | 0;
-   i2 = (Math_imul(i16, i16) | 0) + i2 | 0;
-   i4 = i4 + 1 | 0;
-  } while ((i4 | 0) != (i6 | 0));
-  if (!i2) d3 = 0.0; else d3 = d7 / +Math_sqrt(+(+(i2 | 0)));
- } else d3 = 0.0;
- if (i5) {
+   i16 = HEAP32[i10 + (i5 << 2) >> 2] | 0;
+   i3 = (Math_imul(i16, i16) | 0) + i3 | 0;
+   i5 = i5 + 1 | 0;
+  } while ((i5 | 0) != (i7 | 0));
+  if (!i3) d2 = 0.0; else d2 = d4 / +Math_sqrt(+(+(i3 | 0)));
+ } else d2 = 0.0;
+ if (i6) {
   if ((i13 | 0) > 0) i1 = 0; else return;
   do {
-   HEAP32[i15 + (i1 << 2) >> 2] = ~~+Math_floor(+(d3 * +(HEAP32[i12 + (i1 << 2) >> 2] | 0) * (+(HEAP16[i14 + (i1 << 1) >> 1] | 0) * .000244140625) + .5));
+   HEAP32[i15 + (i1 << 2) >> 2] = ~~+Math_floor(+(d2 * +(HEAP32[i10 + (i1 << 2) >> 2] | 0) * (+(HEAP16[i14 + (i1 << 1) >> 1] | 0) * .000244140625) + .5));
    i1 = i1 + 1 | 0;
   } while ((i1 | 0) != (i13 | 0));
   return;
  }
- d3 = d3 * +Math_sin(+d9);
+ d2 = d2 * +Math_sin(+d9);
  if ((i1 | 0) > 0) {
-  i2 = 0;
+  i3 = 0;
   do {
-   HEAPF64[i11 + (i2 << 3) >> 3] = d3 * +(HEAP32[i12 + (i2 << 2) >> 2] | 0);
-   i2 = i2 + 1 | 0;
-  } while ((i2 | 0) != (i1 | 0));
+   HEAPF64[i12 + (i3 << 3) >> 3] = d2 * +(HEAP32[i10 + (i3 << 2) >> 2] | 0);
+   i3 = i3 + 1 | 0;
+  } while ((i3 | 0) != (i1 | 0));
  }
- HEAPF64[i11 + (i1 << 3) >> 3] = +(0 - i8 | 0) * d7 * +Math_cos(+d9);
- if ((i6 | 0) > (i1 | 0)) do {
+ HEAPF64[i12 + (i1 << 3) >> 3] = +(0 - i8 | 0) * d4 * +Math_cos(+d9);
+ if ((i7 | 0) > (i1 | 0)) do {
   i16 = i1;
   i1 = i1 + 1 | 0;
-  HEAPF64[i11 + (i1 << 3) >> 3] = d3 * +(HEAP32[i12 + (i16 << 2) >> 2] | 0);
- } while ((i1 | 0) != (i6 | 0));
- _od_apply_householder(i11, i11, i10, i13);
- if ((i13 | 0) > 0) i1 = 0; else return;
+  HEAPF64[i12 + (i1 << 3) >> 3] = d2 * +(HEAP32[i10 + (i16 << 2) >> 2] | 0);
+ } while ((i1 | 0) != (i7 | 0));
+ i3 = (i13 | 0) > 0;
+ if (i3) {
+  i1 = 0;
+  d2 = 0.0;
+ } else return;
  do {
-  HEAP32[i15 + (i1 << 2) >> 2] = ~~+Math_floor(+(+HEAPF64[i11 + (i1 << 3) >> 3] * (+(HEAP16[i14 + (i1 << 1) >> 1] | 0) * .000244140625) + .5));
+  d9 = +HEAPF64[i11 + (i1 << 3) >> 3];
+  d2 = d2 + d9 * d9;
+  i1 = i1 + 1 | 0;
+ } while ((i1 | 0) != (i13 | 0));
+ d4 = d2 + 1.0e-100;
+ i1 = 0;
+ d2 = 0.0;
+ do {
+  d2 = d2 + +HEAPF64[i11 + (i1 << 3) >> 3] * +HEAPF64[i12 + (i1 << 3) >> 3];
+  i1 = i1 + 1 | 0;
+ } while ((i1 | 0) != (i13 | 0));
+ d2 = d2 * 2.0 / d4;
+ i1 = 0;
+ do {
+  i16 = i12 + (i1 << 3) | 0;
+  HEAPF64[i16 >> 3] = +HEAPF64[i16 >> 3] - d2 * +HEAPF64[i11 + (i1 << 3) >> 3];
+  i1 = i1 + 1 | 0;
+ } while ((i1 | 0) != (i13 | 0));
+ if (i3) i1 = 0; else return;
+ do {
+  HEAP32[i15 + (i1 << 2) >> 2] = ~~+Math_floor(+(+HEAPF64[i12 + (i1 << 3) >> 3] * (+(HEAP16[i14 + (i1 << 1) >> 1] | 0) * .000244140625) + .5));
   i1 = i1 + 1 | 0;
  } while ((i1 | 0) != (i13 | 0));
  return;
