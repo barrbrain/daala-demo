@@ -591,7 +591,6 @@ int od_compute_householder(od_val16 *r, int n, od_val32 gr, int *sign,
  * @param [in]      n      number of dimensions in x,r
  */
 EMSCRIPTEN_KEEPALIVE
-__attribute__((noinline))
 void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
  int n) {
   int i;
