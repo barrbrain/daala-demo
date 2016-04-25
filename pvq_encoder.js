@@ -752,9 +752,16 @@ function _od_pvq_compute_gain(i4, i3, i7, i6, d5, i2) {
    i2 = i2 + 1 | 0;
   } while ((i2 | 0) != (i3 | 0));
  } else d1 = 0.0;
- d8 = +Math_sqrt(+d1);
- HEAPF64[i6 >> 3] = d8;
- return +(+_od_gain_compand(d8, i7, d5));
+ d1 = +Math_sqrt(+d1);
+ HEAPF64[i6 >> 3] = d1;
+ if (d5 == 1.0) {
+  d8 = d1 / +(i7 | 0);
+  return +d8;
+ } else {
+  d8 = +Math_pow(+(d1 * .000244140625), +(1.0 / d5)) * 4096.0 / +(i7 | 0);
+  return +d8;
+ }
+ return 0.0;
 }
 
 function _od_gain_expand(d4, i2, d3) {

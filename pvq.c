@@ -621,7 +621,6 @@ void od_apply_householder(od_val16 *out, const od_val16 *x, const od_val16 *r,
  * @return            g^(1/beta)
  */
 EMSCRIPTEN_KEEPALIVE
-__attribute__((noinline))
 od_val32 od_gain_compand(od_val32 g, int q0, double beta) {
   if (beta == 1) return OD_ROUND32(OD_CGAIN_SCALE*g/(double)q0);
   else {
