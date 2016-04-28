@@ -95,6 +95,10 @@ function lenDcDelta(x) {
   return i < 6 ? 3 + i : (i << 1) - 2;
 }
 
+function lenMag(x) {
+  return lenDcDelta((x>>1)^(-(x&1)));
+}
+
 // ceil(log2(k+n-1 choose n-1))
 function weakCompositionEntropy(k, n) {
   k=k|0;
@@ -142,6 +146,8 @@ function usq8x8(x, scale) {
   return bitcount|0;
 }
 
+var OD_BAND_OFFSETS8 = new Int8Array([1, 16, 24, 32, 64]);
+
 function pvq8x8(x, scale, beta, pli, cfl) {
   var bitcount = 0, k = 0, v = 0;
   var robust = 1, keyframe = 1;
@@ -153,7 +159,11 @@ function pvq8x8(x, scale, beta, pli, cfl) {
   var vk = pvq_theta_out + 16;
   var r0 = pvq_theta_out + 24;
   var y_pulse = pvq_theta_out+24+(64<<2);
-  F8[skip_diff>>3] = 0.;
+  var cg = 0, off = 0, size = 0;
+
+  bitcount += lenDcDelta(I4[x]-last_dc); // DC-delta
+  last_dc = I4[x];
+
   if (pli == 0) {
     for (k = 0; k < 64; k++) {
       I4[(r0>>2)+k] = 0;
@@ -171,11 +181,27 @@ function pvq8x8(x, scale, beta, pli, cfl) {
     v = I4[y+k];
     I4[x+k] = v;
   }
-  var cg = pvq_encoder.od_pvq_theta((y+1)<<2, (x+1)<<2, r0+4,
-    63, q0, y_pulse, itheta, max_theta, vk,
-    beta, skip_diff, robust, keyframe, pli,
-    qm_ptr + 2, qm_inv_ptr + 2, pvq_buf);
-  bitcount += bitrate(y, cg, I4[vk>>2]);
+
+  F8[skip_diff>>3] = 0.;
+  for (k = 0; k < 4; k++) {
+    off = OD_BAND_OFFSETS8[k];
+    size = OD_BAND_OFFSETS8[k+1]-off;
+    cg = pvq_encoder.od_pvq_theta((y+off)<<2, (x+off)<<2, r0+(off<<2),
+      size, q0, y_pulse, itheta, max_theta, vk,
+      beta, skip_diff, robust, keyframe, pli,
+      qm_ptr + (off<<1), qm_inv_ptr + (off<<1), pvq_buf);
+    bitcount += lenMag(cg); // Gain
+    if (pli > 0) { // Only predict CfL
+      bitcount += lenMag(1 + I4[itheta>>2]); // Theta
+    }
+    if (I4[itheta>>2] != -1) {
+      bitcount += weakCompositionEntropy(I4[vk>>2], size - 1); // Shape
+    } else if (cg != 0) {
+      bitcount += weakCompositionEntropy(I4[vk>>2], size); // Shape
+    }
+  }
+  for (k = 1; k < 64; k++) bitcount += !!I4[y+k]; // Signs
+
   for (k = 1; k < 64; k++) {
     v = I4[y+k];
     I4[x+zigzag[k]] = v;

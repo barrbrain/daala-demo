@@ -99,11 +99,11 @@ and transform to <a href="https://en.wikipedia.org/wiki/YCgCo">YCgCo</a> before 
 <p>We apply the 4-point <a href="https://people.xiph.org/~xiphmont/demo/daala/demo1.shtml">lapping along block edges</a>
 that has been settled on in <a href="https://xiph.org/daala/">Daala</a>. It balances some relief from blocking
 artifacts with less ringing than a full block transform.
-<p>For now, quantization is a single-band implementation of
-<a href="https://people.xiph.org/~jm/daala/pvq_demo/">Perceptual Vector Quantization</a>.
-The bitrate is estimated assuming entropy coding of the PVQ codeword with less than one bit overhead per block.
-DC coefficents and companded gain are simply <a href="https://en.wikipedia.org/wiki/Delta_encoding">delta encoded</a>
-using the prefix scheme recommended for JPEG.
+<p>Quantization has the same 4-band implementation of
+<a href="https://people.xiph.org/~jm/daala/pvq_demo/">Perceptual Vector Quantization</a> as in Daala.
+The bitrate is estimated assuming entropy coding of the PVQ codeword with less than one bit overhead per band.
+DC coefficents are simply <a href="https://en.wikipedia.org/wiki/Delta_encoding">delta encoded</a>
+using the prefix scheme recommended for JPEG. A similar scheme is applied for companded gain and the prediction angle.
 <p>The <a href="https://people.xiph.org/~jm/daala/deringing_demo/">deringing</a> code was mangled to
 be initialized on demand and use a small buffer, so it probably has bugs.
 However, it still illustrates the many uses of directed selective smoothing in reducing artifacts.
