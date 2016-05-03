@@ -35,19 +35,24 @@ function init_image() {
   var data = new ArrayBuffer(w*h*4);
   new Uint8ClampedArray(data).set(imagedata.data);
   worker.postMessage({image: {width: w, height: h, data: data}}, [data]);
-  document.getElementById('status').innerText = 'Loaded image...';
+  //document.getElementById('status').innerText = 'Loaded image...';
 }
 
+var N = 0;
 worker.addEventListener('message', function(e) {
   var message = e.data;
   var kb = Math.round(message.bits / 800) / 10;
   document.getElementById('status').innerText = 'Applied all filters in ' + message.timing + ' ms. Approximately ' + kb + ' kilobytes.';
+  console.log(message.stats);
   var w = message.image.width;
   var h = message.image.height;
   var imagedata = new ImageData(new Uint8ClampedArray(message.image.data), w, h);
   var canvas = document.getElementById('canvas');
   var ctx = canvas.getContext('2d');
   ctx.putImageData(imagedata, 0, 0);
+  var srcimage = document.getElementById('srcimage');
+  N = N + 1;
+  if (N < 1000) srcimage.src = 'subset3-mono/' + (1000+N+'').substr(1,3) + '.png';
 });
 
 function loadUserImage(event) {

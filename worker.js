@@ -148,6 +148,8 @@ function usq8x8(x, scale) {
 
 var OD_BAND_OFFSETS8 = new Int8Array([1, 16, 24, 32, 64]);
 
+var stats = [[],[],[],[]];
+
 function pvq8x8(x, scale, beta, pli, cfl) {
   var bitcount = 0, k = 0, v = 0;
   var robust = 1, keyframe = 1;
@@ -159,7 +161,7 @@ function pvq8x8(x, scale, beta, pli, cfl) {
   var vk = pvq_theta_out + 16;
   var r0 = pvq_theta_out + 24;
   var y_pulse = pvq_theta_out+24+(64<<2);
-  var cg = 0, off = 0, size = 0;
+  var cg = 0, off = 0, size = 0, b = 0;
 
   bitcount += lenDcDelta(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
@@ -182,10 +184,14 @@ function pvq8x8(x, scale, beta, pli, cfl) {
     I4[x+k] = v;
   }
 
+  for (b = 0; b <= 6; b++) {
+  beta = 1. + b / 12.;
+  for (q0 = 421; q0 <= 814; q0++) {
   F8[skip_diff>>3] = 0.;
   for (k = 0; k < 4; k++) {
     off = OD_BAND_OFFSETS8[k];
     size = OD_BAND_OFFSETS8[k+1]-off;
+    bitcount = stats[k][q0*16+b]|0;
     cg = pvq_encoder.od_pvq_theta((y+off)<<2, (x+off)<<2, r0+(off<<2),
       size, q0, y_pulse, itheta, max_theta, vk,
       beta, skip_diff, robust, keyframe, pli,
@@ -199,8 +205,11 @@ function pvq8x8(x, scale, beta, pli, cfl) {
     } else if (cg != 0) {
       bitcount += weakCompositionEntropy(I4[vk>>2], size); // Shape
     }
+    for (; size > 0; off++, size--) bitcount += !!I4[y+off]; // Signs
+    stats[k][q0*16+b] = bitcount;
   }
-  for (k = 1; k < 64; k++) bitcount += !!I4[y+k]; // Signs
+  }
+  }
 
   for (k = 1; k < 64; k++) {
     v = I4[y+k];
@@ -218,7 +227,7 @@ function quantize(w, h, scale, method) {
   last_qg = 0;
   for (i = 0; i < h; i += 8) {
     for (j = 0; j < w; j += 8) {
-      for (pli = 0; pli < 3; pli++) {
+      for (pli = 0; pli < 1; pli++) {
         dct.od_bin_fdct8x8(pvq_in, 8, (pli*w*h + p + j) << 2, w, block_buf);
         bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, config.beta, pli, config.cfl) : usq8x8(pvq_in>>2, scale);
         dct.od_bin_idct8x8((pli*w*h + p + j) << 2, w, pvq_in, 8, block_buf);
@@ -273,7 +282,7 @@ function update_image() {
   var timing = new Date() - ts;
   var data = new ArrayBuffer(w*h*4);
   ycgco2rgb(imagebuffer, new Uint8ClampedArray(data), w*h);
-  postMessage({image: {width: w, height: h, data: data}, timing: timing, bits: bitcount}, [data]);
+  postMessage({image: {width: w, height: h, data: data}, timing: timing, bits: bitcount, stats:stats}, [data]);
 }
 
 onmessage = function(e) {
