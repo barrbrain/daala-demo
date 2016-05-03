@@ -1,4 +1,4 @@
-var worker = new Worker('worker.js');
+var workers = [new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js')];
 
 var dering_map = [0, 0.5, 0.707, 1, 1.41, 2];
 
@@ -15,6 +15,7 @@ var cq_map = [0x0000,
 0x0D48, 0x0ED3, 0x108C, 0x1278, 0x149D, 0x1702,
 0x19AE, 0x1CAA, 0x1FFF];
 
+var N = 0;
 function init_image() {
   var canvas = document.getElementById('canvas');
   var srcimage = document.getElementById('srcimage');
@@ -34,26 +35,26 @@ function init_image() {
   var imagedata = ctx.getImageData(0, 0, w, h);
   var data = new ArrayBuffer(w*h*4);
   new Uint8ClampedArray(data).set(imagedata.data);
-  worker.postMessage({image: {width: w, height: h, data: data}}, [data]);
+  workers[N&3].postMessage({image: {width: w, height: h, data: data}}, [data]);
   //document.getElementById('status').innerText = 'Loaded image...';
+  if (N < 3) {
+    N = N + 1;
+    srcimage.src = 'subset1-mono/' + (1000+N+'').substr(1,3) + '.png';
+  }
 }
 
-var N = 0;
-worker.addEventListener('message', function(e) {
+function recvMessage(e) {
   var message = e.data;
-  var kb = Math.round(message.bits / 800) / 10;
-  document.getElementById('status').innerText = 'Applied all filters in ' + message.timing + ' ms. Approximately ' + kb + ' kilobytes.';
+  document.getElementById('status').innerText = 'Applied all filters in ' + message.timing + ' ms.';
   console.log(message.stats);
-  var w = message.image.width;
-  var h = message.image.height;
-  var imagedata = new ImageData(new Uint8ClampedArray(message.image.data), w, h);
-  var canvas = document.getElementById('canvas');
-  var ctx = canvas.getContext('2d');
-  ctx.putImageData(imagedata, 0, 0);
   var srcimage = document.getElementById('srcimage');
   N = N + 1;
-  if (N < 1000) srcimage.src = 'subset3-mono/' + (1000+N+'').substr(1,3) + '.png';
-});
+  if (N < 100) srcimage.src = 'subset1-mono/' + (1000+N+'').substr(1,3) + '.png';
+}
+workers[0].addEventListener('message', recvMessage);
+workers[1].addEventListener('message', recvMessage);
+workers[2].addEventListener('message', recvMessage);
+workers[3].addEventListener('message', recvMessage);
 
 function loadUserImage(event) {
   var file = event.target.files[0];
@@ -67,32 +68,32 @@ function loadUserImage(event) {
 function changeStrength(strength, post) {
   var value = dering_map[strength.value];
   document.getElementById('strengthVal').innerText = value;
-  if (post) worker.postMessage({strength: value});
+  //if (post) worker.postMessage({strength: value});
 }
 
 function changeLapping(lapping) {
   var value = !!(lapping.checked);
-  worker.postMessage({lapping: value});
+  //worker.postMessage({lapping: value});
 }
 
 function changeScale(scale, post) {
   var value = cq_map[scale.value];
   document.getElementById('scaleVal').innerText = (value / 16.).toPrecision(4);
-  if (post) worker.postMessage({scale: value});
+  //if (post) worker.postMessage({scale: value});
 }
 
 function changeBeta(beta, post) {
   var value = beta.value / 12.;
   document.getElementById('betaVal').innerText = value.toPrecision(4);
-  if (post) worker.postMessage({beta: value});
+  //if (post) worker.postMessage({beta: value});
 }
 
 function changeCfL(cfl) {
   var value = !!(cfl.checked);
-  worker.postMessage({cfl: value});
+  //worker.postMessage({cfl: value});
 }
 
 function changeMethod(method) {
   var value = method.value;
-  worker.postMessage({method: value});
+  //worker.postMessage({method: value});
 }

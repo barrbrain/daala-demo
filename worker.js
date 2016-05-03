@@ -1,4 +1,4 @@
-self.HEAP = new ArrayBuffer(128*1024*1024);
+self.HEAP = new ArrayBuffer(16*1024*1024);
 self.I4 = new Int32Array(HEAP);
 self.I2 = new Int16Array(HEAP);
 self.F8 = new Float64Array(HEAP);
@@ -211,10 +211,6 @@ function pvq8x8(x, scale, beta, pli, cfl) {
   }
   }
 
-  for (k = 1; k < 64; k++) {
-    v = I4[y+k];
-    I4[x+zigzag[k]] = v;
-  }
   return bitcount|0;
 }
 
@@ -230,7 +226,6 @@ function quantize(w, h, scale, method) {
       for (pli = 0; pli < 1; pli++) {
         dct.od_bin_fdct8x8(pvq_in, 8, (pli*w*h + p + j) << 2, w, block_buf);
         bitcount += method == 'pvq' ? pvq8x8(pvq_in>>2, scale, config.beta, pli, config.cfl) : usq8x8(pvq_in>>2, scale);
-        dct.od_bin_idct8x8((pli*w*h + p + j) << 2, w, pvq_in, 8, block_buf);
       }
     }
     p += 8 * w;
@@ -270,19 +265,10 @@ function update_image() {
     filter.lapvert(imageptr, w, h);
     filter.laphorz(imageptr, w, h, block_buf);
   }
-  var bitcount = quantize(w, h, config.scale, config.method);
-  if (config.lapping) {
-    filter.unlaphorz(imageptr, w, h, block_buf);
-    filter.unlapvert(imageptr, w, h);
-  }
-  if (config.strength > 0) {
-    var dering_tables = imageptr + ((w * h * 3) << 2) | 0;
-    dering.dering_image(imageptr, w, h, ~~+config.scale*Math.pow(config.strength, 0.84182), dering_tables);
-  }
+  stats = [[],[],[],[]];
+  quantize(w, h, config.scale, config.method);
   var timing = new Date() - ts;
-  var data = new ArrayBuffer(w*h*4);
-  ycgco2rgb(imagebuffer, new Uint8ClampedArray(data), w*h);
-  postMessage({image: {width: w, height: h, data: data}, timing: timing, bits: bitcount, stats:stats}, [data]);
+  postMessage({timing: timing, stats:stats});
 }
 
 onmessage = function(e) {
