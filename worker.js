@@ -151,7 +151,10 @@ var OD_BAND_OFFSETS8 = new Int8Array([1, 16, 24, 32, 64]);
 function pvq8x8(x, scale, beta, pli, cfl) {
   var bitcount = 0, k = 0, v = 0;
   var robust = 1, keyframe = 1;
-  var q0 = Math.round(scale / beta)|0;
+  var q0 = [Math.round(scale * Math.pow(19.82/16.,(beta-1.)*2.))|0,
+            Math.round(scale * Math.pow(26.73/16.,(beta-1.)*2.))|0,
+            Math.round(scale * Math.pow(26.73/16.,(beta-1.)*2.))|0,
+            Math.round(scale)|0];
   var y = pvq_out>>2;
   var skip_diff = pvq_theta_out;
   var itheta = pvq_theta_out + 8;
@@ -160,6 +163,8 @@ function pvq8x8(x, scale, beta, pli, cfl) {
   var r0 = pvq_theta_out + 24;
   var y_pulse = pvq_theta_out+24+(64<<2);
   var cg = 0, off = 0, size = 0;
+
+  if (pli > 0) q0 = [scale, scale, scale, scale];
 
   bitcount += lenDcDelta(I4[x]-last_dc); // DC-delta
   last_dc = I4[x];
@@ -187,8 +192,8 @@ function pvq8x8(x, scale, beta, pli, cfl) {
     off = OD_BAND_OFFSETS8[k];
     size = OD_BAND_OFFSETS8[k+1]-off;
     cg = pvq_encoder.od_pvq_theta((y+off)<<2, (x+off)<<2, r0+(off<<2),
-      size, q0, y_pulse, itheta, max_theta, vk,
-      beta, skip_diff, robust, keyframe, pli,
+      size, q0[k], y_pulse, itheta, max_theta, vk,
+      k < 3 ? beta : 1., skip_diff, robust, keyframe, pli,
       qm_ptr + (off<<1), qm_inv_ptr + (off<<1), pvq_buf);
     bitcount += lenMag(cg); // Gain
     if (pli > 0) { // Only predict CfL
