@@ -148,7 +148,7 @@ function usq8x8(x, scale) {
 
 var OD_BAND_OFFSETS8 = new Int8Array([1, 16, 24, 32, 64]);
 
-var stats = [[],[],[],[]];
+var stats;
 
 function pvq8x8(x, scale, beta, pli, cfl) {
   var bitcount = 0, k = 0, v = 0;
@@ -265,7 +265,7 @@ function update_image() {
     filter.lapvert(imageptr, w, h);
     filter.laphorz(imageptr, w, h, block_buf);
   }
-  stats = [[],[],[],[]];
+  stats = [new Float64Array(16*1024), new Float64Array(16*1024), new Float64Array(16*1024), new Float64Array(16*1024)];
   quantize(w, h, config.scale, config.method);
   var timing = new Date() - ts;
   postMessage({timing: timing, stats:stats});

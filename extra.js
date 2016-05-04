@@ -1,4 +1,5 @@
-var workers = [new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js')];
+var workers = [new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js'),
+               new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js'), new Worker('worker.js')];
 
 var dering_map = [0, 0.5, 0.707, 1, 1.41, 2];
 
@@ -35,26 +36,36 @@ function init_image() {
   var imagedata = ctx.getImageData(0, 0, w, h);
   var data = new ArrayBuffer(w*h*4);
   new Uint8ClampedArray(data).set(imagedata.data);
-  workers[N&3].postMessage({image: {width: w, height: h, data: data}}, [data]);
+  workers[N&7].postMessage({image: {width: w, height: h, data: data}}, [data]);
   //document.getElementById('status').innerText = 'Loaded image...';
-  if (N < 3) {
+  if (N < 7) {
     N = N + 1;
-    srcimage.src = 'subset1-mono/' + (1000+N+'').substr(1,3) + '.png';
+    srcimage.src = 'subset3-mono/' + (1000+N+'').substr(1,3) + '.png';
   }
 }
 
+var stats = [new Float64Array(16*1024), new Float64Array(16*1024), new Float64Array(16*1024), new Float64Array(16*1024)];
 function recvMessage(e) {
   var message = e.data;
-  document.getElementById('status').innerText = 'Applied all filters in ' + message.timing + ' ms.';
-  console.log(message.stats);
+  var i, j;
+  for (i = 0; i < 4; i++) {
+    for (j = 0; j < 16*1024; j++) {
+      stats[i][j] += message.stats[i][j];
+    }
+  }
+  document.getElementById('status').innerText = '[['+stats[0].join(',')+'],['+stats[1].join(',')+'],['+stats[2].join(',')+'],['+stats[3].join(',')+']]';
   var srcimage = document.getElementById('srcimage');
   N = N + 1;
-  if (N < 100) srcimage.src = 'subset1-mono/' + (1000+N+'').substr(1,3) + '.png';
+  if (N < 1000) srcimage.src = 'subset3-mono/' + (1000+N+'').substr(1,3) + '.png';
 }
 workers[0].addEventListener('message', recvMessage);
 workers[1].addEventListener('message', recvMessage);
 workers[2].addEventListener('message', recvMessage);
 workers[3].addEventListener('message', recvMessage);
+workers[4].addEventListener('message', recvMessage);
+workers[5].addEventListener('message', recvMessage);
+workers[6].addEventListener('message', recvMessage);
+workers[7].addEventListener('message', recvMessage);
 
 function loadUserImage(event) {
   var file = event.target.files[0];
