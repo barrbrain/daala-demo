@@ -18,8 +18,10 @@ def loglogfit(off, band):
   label = '%0.3f'%(1.+off/12.)
   inverse = interp1d(ylog, xlog)
   # coeffs[(band, label+'i')] = inverse
-  x = np.arange(24,492)
-  b1 = np.log2(np.asarray(stats[band][0], dtype=float)[x])
+  y1log = np.log2(np.asarray(stats[band][0], dtype=float))
+  b1 = y1log[x]
+  x = x[np.all((b1 < ylog.max(), b1 > ylog.min()), axis=0)]
+  b1 = y1log[x]
   qm = inverse(b1)-np.log2(x)
   ax[band].plot(x, np.exp2(qm)*16, '-', label=label)
   ax[band].grid(True, which='both')
@@ -31,7 +33,7 @@ for band in range(len(stats)):
   #print(max(np.exp2(coeffs[(band, '%0.3fi'%(1.+i/12.))](bitrate)) for i in range(7)))
   #bitrate = max(np.log2(stats[band][i][1015]) for i in range(7))
   #print(min(np.exp2(coeffs[(band, '%0.3fi'%(1.+i/12.))](bitrate)) for i in range(7)))
-ax[0].set_xlim([24, 492])
+ax[0].set_xlim([9, 1015])
 pyplot.legend()
 pyplot.show()
 
