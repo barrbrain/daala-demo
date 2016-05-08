@@ -4,11 +4,14 @@ import numpy as np
 import sys
 from scipy.integrate import trapz
 from scipy.interpolate import interp1d
+from scipy import optimize
 stats = json.loads(open(sys.argv[1], 'r').read())
 stats = [[band[off::16] for off in range(7)] for band in stats]
 f, ((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)) = pyplot.subplots(3, 3, sharex=True, sharey=True)
 ax = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]
 coeffs = {}
+def Q16(x):
+  return np.exp2(x)*16
 def loglogfit(off, band):
   y = np.asarray(stats[band][off], dtype=float)
   x = y.nonzero()[0]
@@ -24,11 +27,19 @@ def loglogfit(off, band):
   xlog = np.log2(x)
   b1 = y1log[x]
   qm = inverse(b1)-xlog
-  ax[band].loglog(x, np.exp2(qm)*16, '-', label=label)
+  ax[band].loglog(x, Q16(qm), '-', label=label)
   ax[band].grid(True, which='both')
-  area = trapz(qm, xlog)
-  mean = area / (xlog.max() - xlog.min())
-  print(band, band - band//3, label, np.exp2(mean)*16)
+  def piecewise_linear(x, y0, y1):
+    x0 = np.log2(4 * 16)
+    x1 = np.log2(318 * 16)
+    #y0 = np.log2(np.round(np.exp2(y0)))
+    #y1 = np.log2(np.round(np.exp2(y1)))
+    return np.piecewise(x, [x <= x0], [lambda x:y0, lambda x:(x-x0)*(y1-y0)/(x1-x0)+y0])
+  area = trapz(qm[x <= 64], xlog[x <= 64])
+  mean = area / (xlog[x<=64].max() - xlog[x<=64].min())
+  fit = np.polyval(np.polyfit(xlog[x >= 64], qm[x >= 64], 1), np.log2(318*16))
+  opt = optimize.curve_fit(piecewise_linear, xlog, qm, [mean, fit])
+  print(band, band - band//3, label, Q16(opt[0][0]), Q16(opt[0][1]))
 for band in range(len(stats)):
   for off in range(1,7):
     loglogfit(off, band)
